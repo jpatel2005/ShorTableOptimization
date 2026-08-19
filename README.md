@@ -19,8 +19,8 @@ submissions.
   required theorems.
 - `leaderboard/config.json` defines the active targets and score weights.
 - `scripts/verifier.py` is the CI verifier.
-- `scripts/leaderboard.py` updates leaderboard JSON from successful verifier
-  artifacts.
+- `scripts/leaderboard.py` updates the website benchmark JSON from successful
+  verifier artifacts.
 
 ## Submission Template
 
@@ -74,7 +74,8 @@ cases by branching on `mode` and `k` in `submissionHandles`.
 
 For example, a specialized submission can mark only one case as handled and let
 all other cases use the protected fallback generator. CI only scores configured
-targets, and each configured target must be handled by the submission.
+targets that the submission handles. A submission must handle at least one
+configured target; unhandled targets are skipped.
 
 `generatedPoints` may be any mathematically distinct list with the required
 length for the selected product mode and `k`. Each point must be one of:
@@ -95,7 +96,7 @@ operations, and return to the starting state.
 
 ## Pull Request Setup
 
-After the initial repository state is committed, create the template branch:
+The maintained submission base branch is:
 
 ```text
 submission/template
@@ -110,19 +111,18 @@ compare: submission/<name>
 
 GitHub Actions first runs a Python preflight over the submitted files. If that
 passes, it installs Lean using the base template's `lean-toolchain`, runs the
-full verifier, posts a summary comment, and uploads a JSON artifact plus logs.
-Successful submission PRs are closed automatically after the artifact is
-produced.
+full verifier, posts a compact benchmark summary, and uploads verifier artifacts.
+The comment links to the workflow run, readable and JSON results, the website
+benchmark data, and an archived source snapshot stored on the
+`submission-results` branch. Full workflow artifacts and diagnostic logs are
+retained for 90 days. Successful submission PRs are closed automatically only
+after the results and source are archived.
 
 ## Scoring
 
-Submissions are scored on the active target set configured for the repository.
-
-The verifier stores raw metrics for each target. The leaderboard also computes:
-
-```text
-weighted_cost = arithmetic_operation_count + 5 * parallel_phase_product_layer_count
-```
+Submissions are scored independently on the active targets they handle. There is
+no combined score across targets. See [BENCHMARK.md](BENCHMARK.md) for the
+current targets, weights, metric definitions, and published result formats.
 
 ## Local Checks
 

@@ -1,6 +1,10 @@
 {
-  "schema_version": 1,
-  "targets": [],
+  "schema_version": 2,
+  "target_matrix": {
+    "modes": ["PhaseProduct", "PhaseTripleProduct"],
+    "k_min": 2,
+    "k_max": 16
+  },
   "weights": {
     "arithmetic_operation_count": 1,
     "parallel_phase_product_layer_count": 5
