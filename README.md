@@ -12,11 +12,11 @@ submissions.
 - `TableGeneration/Spec.lean` defines protected product modes, default point
   lists, and validity checks for generated points.
 - `TableGeneration/Metrics.lean` defines operation and layer counts.
-- `TableGeneration/Baseline.lean` defines the protected fallback generator.
-- `TableGeneration/Submission/Defs.lean` is where submissions define points and
-  programs.
-- `TableGeneration/Submission/Correctness.lean` is where submissions prove the
-  required theorems.
+- `TableGeneration/Baseline.lean` defines the protected general fallback.
+- `TableGeneration/Policy.lean` defines the portable policy interface.
+- `TableGeneration/BestKnown.lean` selects promoted policies before the general
+  fallback.
+- `TableGeneration/Submission/Policy.lean` contains the submitted policy.
 - `leaderboard/config.json` defines the active targets and score weights.
 - `scripts/verifier.py` is the CI verifier.
 - `scripts/leaderboard.py` updates the website benchmark JSON from successful
@@ -24,58 +24,39 @@ submissions.
 
 ## Submission Template
 
-Submissions should edit:
+Submissions should replace the `implementation` in:
 
-- `TableGeneration/Submission/Defs.lean`
-- `TableGeneration/Submission/Correctness.lean`
+- `TableGeneration/Submission/Policy.lean`
 
-Additional helper Lean files may also be placed under:
+Related helper files should be placed under:
 
-- `TableGeneration/Submission/`
+- `TableGeneration/Submission/Policy/`
 
-Helper files outside `TableGeneration/Submission/` are rejected. Import helper
-files from the two editable files using the corresponding Lean module path, for
-example:
+Import helpers from `Policy.lean`, for example:
 
 ```lean
-import TableGeneration.Submission.Helpers
+import TableGeneration.Submission.Policy.Helpers
 ```
 
 Do not change the protected specification, language, metrics, or workflow files.
 The verifier rejects changed protected files, `sorry`, `admit`, new `axiom` or
-`constant` declarations, `unsafe`, and submitted Lean compile-time execution
-commands such as `#eval`.
+`constant` declarations, `unsafe`, external implementation hooks, and submitted
+Lean compile-time execution commands such as `#eval`.
 
-The two required theorem statements in `Correctness.lean` must remain unchanged:
-
-- `generatedPoints_valid`
-- `generate_ProgConsumesPtsSafe`
+`Defs.lean` and `Correctness.lean` are fixed adapters and must remain unchanged.
 
 ## How Submissions Work
 
-In `TableGeneration/Submission/Defs.lean`, fill in the definitions that describe
-the submitted generator. The intended edit surface is:
+`implementation : GeneratorPolicy` bundles:
 
-- `generatedPoints` returns the table points for a product mode and `k`.
-- `submissionHandles` returns `true` for the `(mode, k)` cases implemented by
-  the submission.
-- `submissionGeneratePointsInOrder` returns the order in which the program will
-  consume the generated points.
-- `submissionGenerate` returns the generated program.
+- generated points and handled `(mode, k)` cases;
+- the point-consumption order and generated program;
+- proofs of point validity, safe consumption, and return to the starting state.
 
-Do not edit the wrapper definitions `generatePointsInOrder` and `generate`.
-They are verifier entry points and must match the template.
-
-In `TableGeneration/Submission/Correctness.lean`, prove the required theorem
-statements without changing their types. The theorem hypotheses include
-`submissionHandles mode k = true`, so a submission can either implement a
-general policy for many `k` values and product modes, or specialize to selected
-cases by branching on `mode` and `k` in `submissionHandles`.
-
-For example, a specialized submission can mark only one case as handled and let
-all other cases use the protected fallback generator. CI only scores configured
-targets that the submission handles. A submission must handle at least one
-configured target; unhandled targets are skipped.
+A policy may be general or target-specific. CI scores only configured targets
+where its `handles` field is true and requires at least one. Unhandled generation
+uses the protected best-known policy, whose final fallback is the general
+generator.
 
 `generatedPoints` may be any mathematically distinct list with the required
 length for the selected product mode and `k`. Each point must be one of:
@@ -84,12 +65,8 @@ length for the selected product mode and `k`. Each point must be one of:
 0, inf, +/- 2^n, or +/- 1/2^n
 ```
 
-The template defaults to `canonicalPoints`, but that list is only a starting
-point and fallback; submissions may replace it with another valid generated
-point list.
-
-The submitted program may consume the generated points in another order, but
-`generatePointsInOrder` must be a permutation of `generatedPoints`.
+The program may consume the points in another order, but that order must be a
+permutation of the generated points.
 
 The program must consume the generated point order, use only safe arithmetic
 operations, and return to the starting state.
@@ -118,6 +95,10 @@ benchmark data, and an archived source snapshot stored on the
 retained for 90 days. Successful submission PRs are closed automatically only
 after the results and source are archived.
 
+When a result becomes a per-target champion, trusted automation constructs the
+complete best-known generator, rebuilds Lean, repeats the verifier checks and
+metrics, and opens a promotion PR against `main`.
+
 ## Scoring
 
 Submissions are scored independently on the active targets they handle. There is
@@ -144,5 +125,5 @@ Run only the structural preflight checks:
 python3 scripts/verifier.py --out-dir artifacts --preflight-only
 ```
 
-The template intentionally contains `sorry`, so the verifier should fail until a
-submission fills in the proofs.
+The template passes preflight but the full verifier rejects it because it handles
+no benchmark targets.

@@ -33,7 +33,8 @@ VALID_TARGET_MODES = {"PhaseProduct", "PhaseTripleProduct"}
 SUBMISSION_DIR = Path("TableGeneration/Submission")
 DEFS_FILE = SUBMISSION_DIR / "Defs.lean"
 CORRECTNESS_FILE = SUBMISSION_DIR / "Correctness.lean"
-SUBMISSION_FILES = {str(DEFS_FILE), str(CORRECTNESS_FILE)}
+POLICY_FILE = SUBMISSION_DIR / "Policy.lean"
+SUBMISSION_FILES = {str(DEFS_FILE), str(CORRECTNESS_FILE), str(POLICY_FILE)}
 ALLOWED_CHANGED_FILES = set(SUBMISSION_FILES)
 SUBMISSION_PREFIX = "TableGeneration/Submission/"
 PROTECTED_FILES = {
@@ -43,6 +44,8 @@ PROTECTED_FILES = {
     "TableGeneration/Language.lean",
     "TableGeneration/Spec.lean",
     "TableGeneration/Metrics.lean",
+    "TableGeneration/Policy.lean",
+    "TableGeneration/BestKnown.lean",
     "TableGeneration/Submission.lean",
     "leaderboard/config.json",
     "lakefile.lean",
@@ -68,20 +71,38 @@ EXPECTED_THEOREMS = {
 }
 
 EXPECTED_WRAPPER_DEFS = {
+    "generatedPoints": (
+        "def generatedPoints (mode : ProductMode) (k : Nat) : List Point := "
+        "Submission.Policy.implementation.generatedPoints mode k"
+    ),
+    "submissionHandles": (
+        "def submissionHandles (mode : ProductMode) (k : Nat) : Bool := "
+        "Submission.Policy.implementation.handles mode k"
+    ),
+    "submissionGeneratePointsInOrder": (
+        "def submissionGeneratePointsInOrder "
+        "(mode : ProductMode) (k : Nat) (hk : k >= 2) : List Point := "
+        "Submission.Policy.implementation.generatePointsInOrder mode k hk"
+    ),
+    "submissionGenerate": (
+        "def submissionGenerate "
+        "(mode : ProductMode) (k : Nat) (hk : k >= 2) : Prog k := "
+        "Submission.Policy.implementation.generate mode k hk"
+    ),
     "generatePointsInOrder": (
         "def generatePointsInOrder "
         "(mode : ProductMode) (k : Nat) (hk : k >= 2) : List Point := "
         "if submissionHandles mode k then "
         "submissionGeneratePointsInOrder mode k hk "
         "else "
-        "baselineGeneratePointsInOrder mode k hk"
+        "bestKnownGeneratePointsInOrder mode k hk"
     ),
     "generate": (
         "def generate (mode : ProductMode) (k : Nat) (hk : k >= 2) : Prog k := "
         "if submissionHandles mode k then "
         "submissionGenerate mode k hk "
         "else "
-        "baselineGenerate mode k hk"
+        "bestKnownGenerate mode k hk"
     ),
 }
 
@@ -94,6 +115,7 @@ BANNED_PATTERNS = {
         r"^\s*syntax\b|^\s*macro\b",
         re.MULTILINE,
     ),
+    "external implementation hook": re.compile(r"\b(?:extern|implemented_by)\b"),
 }
 
 ALLOWED_AXIOMS: set[str] = {"propext"}
@@ -190,7 +212,33 @@ def read_target_config() -> tuple[list[dict[str, Any]] | None, str | None]:
     mode = os.getenv("TABLE_GEN_TARGET_MODE", "").strip()
     k_raw = os.getenv("TABLE_GEN_TARGET_K", "").strip()
     if not mode and not k_raw:
-        return None, None
+        config_path = Path(__file__).resolve().parents[1] / "leaderboard" / "config.json"
+        try:
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            matrix = config["target_matrix"]
+            modes = matrix["modes"]
+            k_min = matrix["k_min"]
+            k_max = matrix["k_max"]
+        except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+            return None, f"Could not read benchmark targets from {config_path}: {exc}"
+        if (
+            not isinstance(modes, list)
+            or not modes
+            or any(item not in VALID_TARGET_MODES for item in modes)
+            or len(set(modes)) != len(modes)
+            or not isinstance(k_min, int)
+            or isinstance(k_min, bool)
+            or not isinstance(k_max, int)
+            or isinstance(k_max, bool)
+            or k_min < 2
+            or k_max < k_min
+        ):
+            return None, f"Benchmark target matrix in {config_path} is invalid."
+        return [
+            {"mode": item, "k": k}
+            for k in range(k_min, k_max + 1)
+            for item in modes
+        ], None
     try:
         k = int(k_raw)
     except ValueError:
@@ -395,9 +443,8 @@ def verify_changed_files(repo: Path) -> dict[str, str]:
         return check_result(
             "changed files are allowed",
             False,
-            "Only Defs.lean, Correctness.lean, and additional Lean helper files under "
-            "TableGeneration/Submission/ may change. Import helper files as "
-            "TableGeneration.Submission.<Name> or a nested module path. Disallowed: "
+            "Only submission Lean files may change. Implement Policy.lean and place "
+            "related helpers under TableGeneration/Submission/Policy/. Disallowed: "
             + ", ".join(disallowed),
         )
     return check_result(
@@ -447,7 +494,7 @@ def verify_wrapper_definitions(repo: Path) -> dict[str, str]:
     return check_result(
         "wrapper definitions are preserved",
         not failures,
-        "The generate wrappers match the template."
+        "The submission adapters and generate wrappers match the template."
         if not failures
         else "; ".join(failures),
     )
@@ -467,7 +514,7 @@ def verify_no_banned_tokens(repo: Path) -> dict[str, str]:
     return check_result(
         "no banned proof shortcuts",
         not failures,
-        "No sorry, admit, axiom, constant, unsafe, or compile-time execution commands were found."
+        "No banned proof shortcuts, external hooks, or execution commands were found."
         if not failures
         else "; ".join(failures[:20]),
     )
@@ -595,12 +642,12 @@ def parse_named_block(output: str, begin: str, end: str) -> dict[str, str]:
     return values
 
 
-def parse_metric_output(output: str) -> dict[str, str]:
-    return parse_named_block(
-        output,
-        "TABLE_GENERATION_METRICS_BEGIN",
-        "TABLE_GENERATION_METRICS_END",
-    )
+def parse_metric_output(
+    output: str,
+    begin: str = "TABLE_GENERATION_METRICS_BEGIN",
+    end: str = "TABLE_GENERATION_METRICS_END",
+) -> dict[str, str]:
+    return parse_named_block(output, begin, end)
 
 
 def collect_handled_targets(
@@ -938,11 +985,12 @@ def build_benchmark_result(result: dict[str, Any]) -> dict[str, Any] | None:
         if metadata.get(field) not in (None, "")
     }
     target = result.get("target") or {}
+    configured_targets = target.get("targets") or []
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "benchmark": {
             "name": CHALLENGE,
-            "targets": target.get("targets", []),
+            "target_count": len(configured_targets),
             "weights": weights,
         },
         "submission": submission,
@@ -960,7 +1008,7 @@ def build_benchmark_markdown(benchmark: dict[str, Any]) -> str:
 
     benchmark_config = benchmark["benchmark"]
     weights = benchmark_config["weights"]
-    configured_target_count = len(benchmark_config["targets"])
+    configured_target_count = benchmark_config["target_count"]
     lines = [
         "<!-- table-generation-submission-result -->",
         "### Table generation benchmark",

@@ -3,4 +3,6 @@ import TableGeneration.Language
 import TableGeneration.Spec
 import TableGeneration.Metrics
 import TableGeneration.Baseline
+import TableGeneration.Policy
+import TableGeneration.BestKnown
 import TableGeneration.Submission

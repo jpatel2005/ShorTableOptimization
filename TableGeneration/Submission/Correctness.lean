@@ -7,7 +7,7 @@ theorem generatedPoints_valid
     (mode : ProductMode) (k : Nat) (_ : k >= 2)
     (_hhandles : submissionHandles mode k = true) :
     ValidPointList mode k (generatedPoints mode k) := by
-  sorry
+  apply Submission.Policy.implementation.generatedPoints_valid <;> assumption
 
 /- For handled cases, the generated program consumes the generated points and returns to start. -/
 theorem generate_ProgConsumesPtsSafe
@@ -16,6 +16,7 @@ theorem generate_ProgConsumesPtsSafe
     ValidPointOrder (generatedPoints mode k) (generatePointsInOrder mode k hk) /\
       ProgConsumesPtsSafe (positive_of_ge_two hk) State.start_state
         (generate mode k hk) (generatePointsInOrder mode k hk) := by
-  sorry
+  simpa [generatePointsInOrder, generate, _hhandles] using
+    Submission.Policy.implementation.generate_safe mode k hk _hhandles
 
 end TableGeneration

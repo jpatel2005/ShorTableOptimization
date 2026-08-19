@@ -48,6 +48,6 @@ comment. Every successful policy is retained for now, not only per-target
 champions. Full verifier output and diagnostic logs remain available as workflow
 artifacts for 90 days.
 
-Promotion of champion implementations into the canonical generator on `main` is
-manual for now. The source archives preserve the inputs needed for a future
-reprocessing or automated policy-composition workflow.
+Champion policies are composed with the general fallback and promoted through a
+verified PR to `main`. Promotion repeats correctness checks and requires the
+published metrics to match.
