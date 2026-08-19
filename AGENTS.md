@@ -34,7 +34,12 @@ submissions.
 - CI should run verifier preflight before installing Lean or building submitted
   Lean code.
 - Leaderboard scoring should use `leaderboard/config.json`.
-- Configured leaderboard targets must be handled by `submissionHandles`.
+- Keep the concise benchmark contract in `BENCHMARK.md` synchronized with the
+  configured targets, weights, and published result formats.
+- A submission must handle at least one configured target; unhandled targets are
+  skipped and do not receive scores.
+- Successful results and submission source snapshots should be retained on the
+  `submission-results` branch.
 - Unhandled submission cases should fall back to the protected baseline
   generator.
 

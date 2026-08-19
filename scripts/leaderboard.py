@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update leaderboard JSON from a successful verifier artifact."""
+"""Update website benchmark JSON from a successful verifier artifact."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def validate_target(raw: Any, source: str) -> dict[str, Any]:
     k = raw.get("k")
     if mode not in VALID_TARGET_MODES:
         raise ValueError(f"{source}.mode must be PhaseProduct or PhaseTripleProduct")
-    if not isinstance(k, int) or k < 2:
+    if not isinstance(k, int) or isinstance(k, bool) or k < 2:
         raise ValueError(f"{source}.k must be an integer at least 2")
     return {"mode": mode, "k": k}
 
@@ -62,12 +62,45 @@ def validate_targets(raw: Any, source: str) -> list[dict[str, Any]]:
 
 
 def validate_config(config: dict[str, Any]) -> list[dict[str, Any]]:
-    targets = validate_targets(config.get("targets"), "config.targets")
+    if config.get("schema_version") != 2:
+        raise ValueError("config schema_version must be 2")
+    matrix = config.get("target_matrix")
+    if not isinstance(matrix, dict):
+        raise ValueError("config target_matrix must be an object")
+    modes = matrix.get("modes")
+    if not isinstance(modes, list) or not modes:
+        raise ValueError("config target_matrix.modes must be a nonempty array")
+    if len(set(modes)) != len(modes) or any(
+        mode not in VALID_TARGET_MODES for mode in modes
+    ):
+        raise ValueError("config target_matrix.modes must contain unique valid modes")
+    k_min = matrix.get("k_min")
+    k_max = matrix.get("k_max")
+    if (
+        not isinstance(k_min, int)
+        or isinstance(k_min, bool)
+        or not isinstance(k_max, int)
+        or isinstance(k_max, bool)
+        or k_min < 2
+        or k_max < k_min
+    ):
+        raise ValueError(
+            "config target_matrix k_min and k_max must define a range from k >= 2"
+        )
+    targets = [
+        {"mode": mode, "k": k}
+        for k in range(k_min, k_max + 1)
+        for mode in modes
+    ]
     weights = config.get("weights")
     if not isinstance(weights, dict):
         raise ValueError("config weights must be an object")
     for key in ("arithmetic_operation_count", "parallel_phase_product_layer_count"):
-        if not isinstance(weights.get(key), int) or weights[key] < 0:
+        if (
+            not isinstance(weights.get(key), int)
+            or isinstance(weights[key], bool)
+            or weights[key] < 0
+        ):
             raise ValueError(f"config weights.{key} must be a nonnegative integer")
     return targets
 
@@ -114,13 +147,29 @@ def validate_result(
     if not isinstance(metrics, dict):
         raise ValueError("submission result metrics must be an object")
     metric_targets = metrics.get("targets")
-    if not isinstance(metric_targets, list) or len(metric_targets) != len(config_targets):
-        raise ValueError("submission result metrics.targets must match configured targets")
-    for metric, expected in zip(metric_targets, config_targets, strict=True):
+    if not isinstance(metric_targets, list) or not metric_targets:
+        raise ValueError("submission result must contain at least one handled target")
+    expected_by_key = {(item["mode"], item["k"]): item for item in config_targets}
+    seen: set[tuple[str, int]] = set()
+    for metric in metric_targets:
         if not isinstance(metric, dict):
             raise ValueError("each target metric must be an object")
+        key = (metric.get("mode"), metric.get("k"))
+        expected = expected_by_key.get(key)
+        if expected is None:
+            raise ValueError(f"metric target {key} is not configured")
+        if key in seen:
+            raise ValueError(f"duplicate metric target {key}")
+        seen.add(key)
         validate_metric_target(metric, expected)
-    return metric_targets
+    target_order = {
+        (target["mode"], target["k"]): index
+        for index, target in enumerate(config_targets)
+    }
+    return sorted(
+        metric_targets,
+        key=lambda item: target_order[(item["mode"], item["k"])],
+    )
 
 
 def weighted_cost(metrics: dict[str, Any], weights: dict[str, int]) -> int:
@@ -131,83 +180,138 @@ def weighted_cost(metrics: dict[str, Any], weights: dict[str, int]) -> int:
     )
 
 
-def metric_totals(
-    metric_targets: list[dict[str, Any]],
-    weights: dict[str, int],
-) -> dict[str, int]:
-    totals = {
-        "weighted_cost": 0,
-        "arithmetic_operation_count": 0,
-        "parallel_phase_product_layer_count": 0,
-        "phase_product_count": 0,
-        "total_operation_count": 0,
-        "point_count": 0,
+def target_entry(metrics: dict[str, Any], weights: dict[str, int]) -> dict[str, Any]:
+    return {
+        "mode": metrics["mode"],
+        "k": metrics["k"],
+        "weighted_cost": weighted_cost(metrics, weights),
+        "arithmetic_operation_count": metrics["arithmetic_operation_count"],
+        "parallel_phase_product_layer_count": metrics[
+            "parallel_phase_product_layer_count"
+        ],
+        "phase_product_count": metrics["phase_product_count"],
+        "total_operation_count": metrics["total_operation_count"],
+        "point_count": metrics["point_count"],
     }
-    for metrics in metric_targets:
-        totals["weighted_cost"] += weighted_cost(metrics, weights)
-        for key in totals:
-            if key != "weighted_cost":
-                totals[key] += metrics[key]
-    return totals
 
 
-def build_entry(
+def source_archive_path(metadata: dict[str, Any]) -> str:
+    pr_number = str(metadata.get("pr_number") or "").strip()
+    run_id = str(metadata.get("run_id") or "").strip()
+    run_attempt = str(metadata.get("run_attempt") or "1").strip()
+    if not pr_number or not run_id:
+        return ""
+    return f"results/pr-{pr_number}/run-{run_id}-attempt-{run_attempt}/source.zip"
+
+
+def build_policy(
     result: dict[str, Any],
     config: dict[str, Any],
     metric_targets: list[dict[str, Any]],
 ) -> dict[str, Any]:
     metadata = result.get("metadata") or {}
     weights = config["weights"]
-    pr_number = str(metadata.get("pr_number") or "").strip()
+    head_sha = str(metadata.get("head_sha") or "").strip()
     run_id = str(metadata.get("run_id") or "").strip()
-    submission_id = f"pr-{pr_number}" if pr_number else f"run-{run_id}"
-    if submission_id == "run-":
-        raise ValueError("submission result metadata must include pr_number or run_id")
+    policy_id = head_sha or (f"run-{run_id}" if run_id else "")
+    if not policy_id:
+        raise ValueError("submission result metadata must include head_sha or run_id")
 
-    target_entries = []
-    for metrics in metric_targets:
-        target_entries.append(
-            {
-                "mode": metrics["mode"],
-                "k": metrics["k"],
-                "weighted_cost": weighted_cost(metrics, weights),
-                "arithmetic_operation_count": metrics["arithmetic_operation_count"],
-                "parallel_phase_product_layer_count": metrics[
-                    "parallel_phase_product_layer_count"
-                ],
-                "phase_product_count": metrics["phase_product_count"],
-                "total_operation_count": metrics["total_operation_count"],
-                "point_count": metrics["point_count"],
-                "points": metrics.get("points", ""),
-                "program": metrics.get("program", ""),
-            }
+    source = {
+        field: metadata[field]
+        for field in (
+            "repository",
+            "pr_number",
+            "head_ref",
+            "head_sha",
+            "run_id",
+            "run_attempt",
+            "created_at",
         )
+        if metadata.get(field) not in (None, "")
+    }
+    archive_path = source_archive_path(metadata)
+    if archive_path:
+        source["archive_path"] = archive_path
 
     return {
-        "submission_id": submission_id,
-        "repository": metadata.get("repository", ""),
-        "pr_number": pr_number,
-        "head_ref": metadata.get("head_ref", ""),
-        "head_sha": metadata.get("head_sha", ""),
-        "run_id": run_id,
-        "run_attempt": metadata.get("run_attempt", ""),
-        "created_at": metadata.get("created_at", ""),
-        "totals": metric_totals(metric_targets, weights),
-        "targets": target_entries,
+        "policy_id": policy_id,
+        "source": source,
+        "coverage": len(metric_targets),
+        "results": [target_entry(metrics, weights) for metrics in metric_targets],
     }
 
 
-def sort_entries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def normalize_policy(
+    policy: dict[str, Any],
+    config_targets: list[dict[str, Any]],
+    weights: dict[str, int],
+) -> dict[str, Any] | None:
+    policy_id = policy.get("policy_id")
+    source = policy.get("source")
+    old_results = policy.get("results")
+    if not isinstance(policy_id, str) or not isinstance(source, dict):
+        raise ValueError("existing policy identity is invalid")
+    if not isinstance(old_results, list):
+        raise ValueError("existing policy results must be an array")
+
+    expected_by_key = {(item["mode"], item["k"]): item for item in config_targets}
+    results = []
+    seen: set[tuple[str, int]] = set()
+    for metrics in old_results:
+        if not isinstance(metrics, dict):
+            raise ValueError("existing policy target result must be an object")
+        key = (metrics.get("mode"), metrics.get("k"))
+        expected = expected_by_key.get(key)
+        if expected is None:
+            continue
+        if key in seen:
+            raise ValueError(f"duplicate existing policy target {key}")
+        seen.add(key)
+        validate_metric_target(metrics, expected)
+        results.append(target_entry(metrics, weights))
+    if not results:
+        return None
+    return {
+        "policy_id": policy_id,
+        "source": source,
+        "coverage": len(results),
+        "results": results,
+    }
+
+
+def sort_policies(policies: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(
-        entries,
-        key=lambda entry: (
-            entry["totals"]["weighted_cost"],
-            entry["totals"]["arithmetic_operation_count"],
-            entry["totals"]["parallel_phase_product_layer_count"],
-            entry.get("created_at") or "",
-            entry["submission_id"],
+        policies,
+        key=lambda policy: (
+            policy["source"].get("created_at") or "",
+            policy["policy_id"],
         ),
     )
+
+
+def build_champions(
+    policies: list[dict[str, Any]],
+    config_targets: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    champions = []
+    for target in config_targets:
+        candidates = []
+        for policy in policies:
+            for metrics in policy["results"]:
+                if (
+                    metrics["mode"] == target["mode"]
+                    and metrics["k"] == target["k"]
+                ):
+                    candidates.append((policy, metrics))
+                    break
+        if not candidates:
+            continue
+        best_cost = min(metrics["weighted_cost"] for _, metrics in candidates)
+        for policy, metrics in sorted(candidates, key=lambda item: item[0]["policy_id"]):
+            if metrics["weighted_cost"] == best_cost:
+                champions.append({"policy_id": policy["policy_id"], **metrics})
+    return champions
 
 
 def update_leaderboard(
@@ -217,26 +321,28 @@ def update_leaderboard(
     config_targets: list[dict[str, Any]],
     metric_targets: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    entry = build_entry(result, config, metric_targets)
-    entries_by_id: dict[str, dict[str, Any]] = {}
+    policy = build_policy(result, config, metric_targets)
+    policies_by_id: dict[str, dict[str, Any]] = {}
     if existing:
-        if existing.get("schema_version") != 1:
-            raise ValueError("existing leaderboard schema_version must be 1")
+        if existing.get("schema_version") != 2:
+            raise ValueError("existing leaderboard schema_version must be 2")
         if existing.get("challenge") != "table-generation":
             raise ValueError("existing leaderboard challenge must be table-generation")
-        if existing.get("targets") != config_targets:
-            raise ValueError("existing leaderboard targets do not match config")
-        for old_entry in existing.get("results", []):
-            if isinstance(old_entry, dict) and isinstance(old_entry.get("submission_id"), str):
-                entries_by_id[old_entry["submission_id"]] = old_entry
+        for old_policy in existing.get("policies", []):
+            if not isinstance(old_policy, dict):
+                raise ValueError("existing leaderboard policy must be an object")
+            normalized = normalize_policy(old_policy, config_targets, config["weights"])
+            if normalized:
+                policies_by_id[normalized["policy_id"]] = normalized
 
-    entries_by_id[entry["submission_id"]] = entry
+    policies_by_id[policy["policy_id"]] = policy
+    policies = sort_policies(list(policies_by_id.values()))
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "challenge": "table-generation",
         "generated_at": utc_now(),
-        "targets": config_targets,
-        "scoring": {
+        "benchmark": {
+            "targets": config_targets,
             "weights": config["weights"],
             "formula": (
                 "weighted_cost = "
@@ -245,7 +351,8 @@ def update_leaderboard(
                 "parallel_phase_product_layer_count"
             ),
         },
-        "results": sort_entries(list(entries_by_id.values())),
+        "policies": policies,
+        "champions": build_champions(policies, config_targets),
     }
 
 

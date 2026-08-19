@@ -41,17 +41,10 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.pull_request.base.sha || github.sha }}
 
-      - name: Read scoring config
+      - name: Read benchmark config
         id: scoring
         working-directory: verifier
-        run: |
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          with open("leaderboard/config.json", encoding="utf-8") as handle:
-              config = json.load(handle)
-          targets = json.dumps(config.get("targets", []), separators=(",", ":"))
-          print(f"targets={targets}")
-          PY
+        run: python3 -m scripts.ci.export_benchmark_config >> "$GITHUB_OUTPUT"
 
       - name: Run verifier preflight
         working-directory: submission
@@ -61,6 +54,7 @@ jobs:
           TABLE_GEN_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           TABLE_GEN_BASE_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
           TABLE_GEN_TARGETS: ${{ steps.scoring.outputs.targets }}
+          TABLE_GEN_SCORE_WEIGHTS: ${{ steps.scoring.outputs.weights }}
         run: |
           python3 ../verifier/scripts/verifier.py --out-dir artifacts --preflight-only
 
@@ -80,6 +74,7 @@ jobs:
           TABLE_GEN_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           TABLE_GEN_BASE_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
           TABLE_GEN_TARGETS: ${{ steps.scoring.outputs.targets }}
+          TABLE_GEN_SCORE_WEIGHTS: ${{ steps.scoring.outputs.weights }}
         run: |
           python3 ../verifier/scripts/verifier.py --out-dir artifacts
 

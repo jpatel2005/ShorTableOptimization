@@ -12,6 +12,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import zipfile
 from typing import Any
 
 
@@ -20,6 +21,13 @@ TARGET_MODULE = "TableGeneration"
 SCORE_FIELDS = [
     "arithmetic_operation_count",
     "parallel_phase_product_layer_count",
+]
+BENCHMARK_METRIC_FIELDS = [
+    "arithmetic_operation_count",
+    "parallel_phase_product_layer_count",
+    "phase_product_count",
+    "total_operation_count",
+    "point_count",
 ]
 VALID_TARGET_MODES = {"PhaseProduct", "PhaseTripleProduct"}
 SUBMISSION_DIR = Path("TableGeneration/Submission")
@@ -192,6 +200,63 @@ def read_target_config() -> tuple[list[dict[str, Any]] | None, str | None]:
         return None, error
     assert target is not None
     return [target], None
+
+
+def validate_score_weights(
+    raw: Any,
+    source: str,
+) -> tuple[dict[str, int] | None, str | None]:
+    if not isinstance(raw, dict):
+        return None, f"{source} must be a JSON object."
+    weights: dict[str, int] = {}
+    for field in SCORE_FIELDS:
+        value = raw.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            return None, f"{source}.{field} must be a nonnegative integer."
+        weights[field] = value
+    return weights, None
+
+
+def read_score_weights() -> tuple[dict[str, int] | None, str | None]:
+    weights_raw = os.getenv("TABLE_GEN_SCORE_WEIGHTS", "").strip()
+    if weights_raw:
+        try:
+            parsed = json.loads(weights_raw)
+        except json.JSONDecodeError as exc:
+            return None, f"TABLE_GEN_SCORE_WEIGHTS must be JSON: {exc}"
+        return validate_score_weights(parsed, "TABLE_GEN_SCORE_WEIGHTS")
+
+    config_path = Path(__file__).resolve().parents[1] / "leaderboard" / "config.json"
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return None, f"Could not read benchmark weights from {config_path}: {exc}"
+    return validate_score_weights(config.get("weights"), "config.weights")
+
+
+def score_formula(weights: dict[str, int]) -> str:
+    return (
+        "weighted_cost = "
+        f"{weights['arithmetic_operation_count']} * arithmetic_operation_count + "
+        f"{weights['parallel_phase_product_layer_count']} * "
+        "parallel_phase_product_layer_count"
+    )
+
+
+def benchmark_metadata(
+    weights: dict[str, int] | None,
+    error: str | None = None,
+) -> dict[str, Any]:
+    if weights is None:
+        metadata: dict[str, Any] = {"configured": False}
+        if error:
+            metadata["error"] = error
+        return metadata
+    return {
+        "configured": True,
+        "weights": weights,
+        "formula": score_formula(weights),
+    }
 
 
 def target_metadata(
@@ -515,19 +580,94 @@ def verify_axiom_dependencies(repo: Path, out_dir: Path) -> dict[str, str]:
     return check_result("axiom dependencies", True, detail)
 
 
-def parse_metric_output(output: str) -> dict[str, str]:
-    metrics: dict[str, str] = {}
+def parse_named_block(output: str, begin: str, end: str) -> dict[str, str]:
+    values: dict[str, str] = {}
     in_block = False
     for line in output.splitlines():
-        if line.strip() == "TABLE_GENERATION_METRICS_BEGIN":
+        if line.strip() == begin:
             in_block = True
             continue
-        if line.strip() == "TABLE_GENERATION_METRICS_END":
+        if line.strip() == end:
             break
         if in_block and "=" in line:
             key, value = line.split("=", 1)
-            metrics[key.strip()] = value.strip()
-    return metrics
+            values[key.strip()] = value.strip()
+    return values
+
+
+def parse_metric_output(output: str) -> dict[str, str]:
+    return parse_named_block(
+        output,
+        "TABLE_GENERATION_METRICS_BEGIN",
+        "TABLE_GENERATION_METRICS_END",
+    )
+
+
+def collect_handled_targets(
+    repo: Path,
+    out_dir: Path,
+    targets: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    source_lines = [
+        "import TableGeneration.Submission.Defs",
+        "",
+        "open TableGeneration",
+        "",
+        '#eval IO.println "TABLE_GENERATION_HANDLES_BEGIN"',
+    ]
+    for target in targets:
+        mode = target["mode"]
+        k = target["k"]
+        source_lines.append(
+            f'#eval IO.println ("{mode}:{k}=" ++ '
+            f"toString (submissionHandles .{mode} {k}))"
+        )
+    source_lines.extend(['#eval IO.println "TABLE_GENERATION_HANDLES_END"', ""])
+
+    with tempfile.TemporaryDirectory() as tmp:
+        handles_file = Path(tmp) / "CollectHandles.lean"
+        handles_file.write_text("\n".join(source_lines), encoding="utf-8")
+        result = run_cmd(["lake", "env", "lean", str(handles_file)], repo, 600)
+
+    write_text(out_dir / "table-generation-handles.log", result["output"])
+    if result["returncode"] != 0:
+        return [], check_result(
+            "target coverage",
+            False,
+            f"Could not evaluate target coverage; lean exited {result['returncode']}.",
+        )
+
+    raw = parse_named_block(
+        result["output"],
+        "TABLE_GENERATION_HANDLES_BEGIN",
+        "TABLE_GENERATION_HANDLES_END",
+    )
+    expected_keys = {f"{target['mode']}:{target['k']}" for target in targets}
+    if set(raw) != expected_keys or any(
+        value not in {"true", "false"} for value in raw.values()
+    ):
+        return [], check_result(
+            "target coverage",
+            False,
+            "Target coverage output is incomplete or invalid.",
+        )
+
+    handled = [
+        target
+        for target in targets
+        if raw[f"{target['mode']}:{target['k']}"] == "true"
+    ]
+    if not handled:
+        return [], check_result(
+            "target coverage",
+            False,
+            "The submission does not handle any configured benchmark target.",
+        )
+    return handled, check_result(
+        "target coverage",
+        True,
+        f"The submission handles {len(handled)} of {len(targets)} configured targets.",
+    )
 
 
 def collect_metrics(
@@ -632,10 +772,9 @@ def collect_metrics(
     if metrics["k"] != k or metrics["mode"] != mode:
         return metrics, check_result("target metrics", False, "Metrics target changed.")
     if str(metrics["submission_handles"]) != "true":
-        return metrics, check_result(
+        return {}, skipped_result(
             "target metrics",
-            False,
-            f"The submission does not handle {mode} k={k}.",
+            f"The submission does not handle {mode} k={k}; target skipped.",
         )
     metrics["submission_handles"] = True
     if metrics["point_count"] != metrics["expected_point_count"]:
@@ -708,17 +847,25 @@ def collect_target_metrics(
     out_dir: Path,
     targets: list[dict[str, Any]],
 ) -> tuple[dict[str, Any], dict[str, str]]:
+    handled_targets, coverage_check = collect_handled_targets(repo, out_dir, targets)
+    if coverage_check["status"] == "failure":
+        return {"targets": []}, coverage_check
+
     target_metrics: list[dict[str, Any]] = []
     failures: list[str] = []
     details: list[str] = []
-    for target in targets:
+    for target in handled_targets:
         metrics, check = collect_metrics(repo, out_dir, target)
         if metrics:
             target_metrics.append(metrics)
         if check["status"] == "failure":
             failures.append(check["details"])
-        else:
+        elif check["status"] == "success":
             details.append(check["details"])
+        else:
+            failures.append(
+                f"Coverage changed while evaluating {target['mode']} k={target['k']}."
+            )
 
     if failures:
         return {"targets": target_metrics}, check_result(
@@ -729,7 +876,9 @@ def collect_target_metrics(
     return {"targets": target_metrics}, check_result(
         "target metrics",
         True,
-        " ".join(details),
+        f"Scored {len(target_metrics)} of {len(targets)} configured targets; "
+        f"skipped {len(targets) - len(handled_targets)} unhandled targets. "
+        + " ".join(details),
     )
 
 
@@ -738,6 +887,110 @@ def summary_detail(text: object, limit: int = 260) -> str:
     if len(detail) <= limit:
         return detail
     return detail[: limit - 3].rstrip() + "..."
+
+
+def weighted_cost(metrics: dict[str, Any], weights: dict[str, int]) -> int:
+    return sum(weights[field] * metrics[field] for field in SCORE_FIELDS)
+
+
+def build_benchmark_result(result: dict[str, Any]) -> dict[str, Any] | None:
+    if result.get("phase") != "full" or result.get("status") != "success":
+        return None
+
+    benchmark = result.get("benchmark")
+    if not isinstance(benchmark, dict) or not benchmark.get("configured"):
+        return None
+    weights = benchmark.get("weights")
+    if not isinstance(weights, dict):
+        return None
+
+    metrics = result.get("metrics")
+    target_metrics = metrics.get("targets") if isinstance(metrics, dict) else None
+    if not isinstance(target_metrics, list) or not target_metrics:
+        return None
+
+    results = []
+    for item in target_metrics:
+        if not isinstance(item, dict):
+            return None
+        target_result = {
+            "mode": item["mode"],
+            "k": item["k"],
+            "weighted_cost": weighted_cost(item, weights),
+        }
+        for field in BENCHMARK_METRIC_FIELDS:
+            target_result[field] = item[field]
+        results.append(target_result)
+
+    metadata = result.get("metadata") or {}
+    submission = {
+        field: metadata[field]
+        for field in (
+            "repository",
+            "pr_number",
+            "head_ref",
+            "head_sha",
+            "base_sha",
+            "run_id",
+            "run_attempt",
+            "created_at",
+        )
+        if metadata.get(field) not in (None, "")
+    }
+    target = result.get("target") or {}
+    return {
+        "schema_version": 1,
+        "benchmark": {
+            "name": CHALLENGE,
+            "targets": target.get("targets", []),
+            "weights": weights,
+        },
+        "submission": submission,
+        "results": results,
+    }
+
+
+def build_benchmark_markdown(benchmark: dict[str, Any]) -> str:
+    submission = benchmark.get("submission") or {}
+    submission_parts = []
+    if submission.get("pr_number"):
+        submission_parts.append(f"PR #{submission['pr_number']}")
+    if submission.get("head_sha"):
+        submission_parts.append(f"commit `{str(submission['head_sha'])[:12]}`")
+
+    benchmark_config = benchmark["benchmark"]
+    weights = benchmark_config["weights"]
+    configured_target_count = len(benchmark_config["targets"])
+    lines = [
+        "<!-- table-generation-submission-result -->",
+        "### Table generation benchmark",
+        "",
+        "Status: **SUCCESS**",
+    ]
+    if submission_parts:
+        lines.extend(["", "Submission: " + " · ".join(submission_parts)])
+    lines.extend(
+        [
+            "",
+            f"Scoring: `{score_formula(weights)}`. Lower is better.",
+            f"Coverage: **{len(benchmark['results'])} of {configured_target_count}** targets.",
+            "",
+            "| Target | Weighted cost | Arithmetic ops | Parallel layers | Phase products | Total ops | Generated points |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+    )
+    for item in benchmark["results"]:
+        lines.append(
+            f"| `{item['mode']}` `k={item['k']}` "
+            f"| **{item['weighted_cost']}** "
+            f"| {item['arithmetic_operation_count']} "
+            f"| {item['parallel_phase_product_layer_count']} "
+            f"| {item['phase_product_count']} "
+            f"| {item['total_operation_count']} "
+            f"| {item['point_count']} |"
+        )
+    lines.extend(["", "All correctness and safety checks passed."])
+    return "\n".join(lines) + "\n"
 
 
 def build_summary(result: dict[str, Any]) -> str:
@@ -806,6 +1059,8 @@ def collect_metadata() -> dict[str, Any]:
 def verify(repo: Path, out_dir: Path, preflight_only: bool = False) -> dict[str, Any]:
     metrics: dict[str, Any] = {}
     targets, target_error = read_target_config()
+    weights, weights_error = read_score_weights()
+    benchmark = benchmark_metadata(weights, weights_error)
 
     checks = preflight_checks(repo)
 
@@ -817,6 +1072,7 @@ def verify(repo: Path, out_dir: Path, preflight_only: bool = False) -> dict[str,
             "phase": "preflight",
             "status": "success" if success else "failure",
             "target": target_metadata(targets, target_error),
+            "benchmark": benchmark,
             "metadata": collect_metadata(),
             "checks": checks,
             "metrics": metrics,
@@ -834,6 +1090,7 @@ def verify(repo: Path, out_dir: Path, preflight_only: bool = False) -> dict[str,
             "phase": "full",
             "status": "failure",
             "target": target_metadata(targets, target_error),
+            "benchmark": benchmark,
             "metadata": collect_metadata(),
             "checks": checks,
             "metrics": metrics,
@@ -856,6 +1113,8 @@ def verify(repo: Path, out_dir: Path, preflight_only: bool = False) -> dict[str,
             )
         elif target_error:
             checks.append(check_result("target metrics", False, target_error))
+        elif weights_error:
+            checks.append(check_result("target metrics", False, weights_error))
         elif targets is None:
             checks.append(skipped_result("target metrics", "No scoring target is configured."))
         else:
@@ -873,19 +1132,39 @@ def verify(repo: Path, out_dir: Path, preflight_only: bool = False) -> dict[str,
         "phase": "full",
         "status": "success" if success else "failure",
         "target": target_metadata(targets, target_error),
+        "benchmark": benchmark,
         "metadata": collect_metadata(),
         "checks": checks,
         "metrics": metrics,
     }
 
 
-def write_artifacts(result: dict[str, Any], out_dir: Path) -> None:
+def write_source_archive(repo: Path, out_dir: Path) -> None:
+    archive_path = out_dir / "table-generation-submission-source.zip"
+    lean_files = sorted((repo / SUBMISSION_DIR).glob("**/*.lean"))
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in lean_files:
+            archive.write(path, arcname=path.relative_to(repo))
+
+
+def write_artifacts(result: dict[str, Any], repo: Path, out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     write_text(
         out_dir / "table-generation-submission-result.json",
         json.dumps(result, indent=2, sort_keys=True) + "\n",
     )
     write_text(out_dir / "table-generation-summary.md", build_summary(result))
+    benchmark = build_benchmark_result(result)
+    if benchmark is not None:
+        write_text(
+            out_dir / "table-generation-results.json",
+            json.dumps(benchmark, separators=(",", ":"), sort_keys=True) + "\n",
+        )
+        write_text(
+            out_dir / "table-generation-results.md",
+            build_benchmark_markdown(benchmark),
+        )
+        write_source_archive(repo, out_dir)
 
 
 def main() -> int:
@@ -910,6 +1189,7 @@ def main() -> int:
             "phase": "exception",
             "status": "failure",
             "target": target_metadata(None),
+            "benchmark": benchmark_metadata(None),
             "metadata": collect_metadata(),
             "checks": [
                 check_result("verifier exception", False, f"{type(exc).__name__}: {exc}")
@@ -917,7 +1197,7 @@ def main() -> int:
             "metrics": {},
         }
 
-    write_artifacts(result, out_dir)
+    write_artifacts(result, repo, out_dir)
     return 0 if result["status"] == "success" else 1
 
 
