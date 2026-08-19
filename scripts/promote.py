@@ -28,6 +28,7 @@ SOURCE_PREFIX = "TableGeneration.Submission.Policy"
 SOURCE_ROOT = PurePosixPath("TableGeneration/Submission")
 ACCEPTED_ROOT = Path("TableGeneration/Policies/Accepted")
 BEST_KNOWN_PATH = Path("TableGeneration/BestKnown.lean")
+BEST_KNOWN_REPORT_PATH = Path("leaderboard/best-known.md")
 METRIC_FIELDS = (
     "arithmetic_operation_count",
     "parallel_phase_product_layer_count",
@@ -269,6 +270,36 @@ def generate_best_known(repo: Path, selections: list[dict[str, Any]]) -> None:
     (repo / BEST_KNOWN_PATH).write_text("\n".join(lines), encoding="utf-8")
 
 
+def generate_best_known_report(
+    repo: Path,
+    selections: list[dict[str, Any]],
+    configured_target_count: int,
+) -> None:
+    lines = [
+        "# Best-Known Table-Generation Results",
+        "",
+        "Generated from verified per-target champion policies.",
+        "",
+        f"Coverage: **{len(selections)} of {configured_target_count}** targets.",
+        "",
+        "| Target | Weighted cost | Arithmetic ops | Parallel layers | Phase products | Total ops | Generated points |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for selection in selections:
+        metrics = selection["metrics"]
+        lines.append(
+            f"| `{selection['mode']}` `k={selection['k']}` "
+            f"| **{metrics['weighted_cost']}** "
+            f"| {metrics['arithmetic_operation_count']} "
+            f"| {metrics['parallel_phase_product_layer_count']} "
+            f"| {metrics['phase_product_count']} "
+            f"| {metrics['total_operation_count']} "
+            f"| {metrics['point_count']} |"
+        )
+    lines.append("")
+    (repo / BEST_KNOWN_REPORT_PATH).write_text("\n".join(lines), encoding="utf-8")
+
+
 def construct(
     repo: Path,
     results_root: Path,
@@ -290,6 +321,7 @@ def construct(
             install_policy(repo, results_root, selection)
             installed.add(selection["policy_id"])
     generate_best_known(repo, selections)
+    generate_best_known_report(repo, selections, len(config_targets))
     return selections
 
 

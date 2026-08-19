@@ -9,10 +9,12 @@ import subprocess
 
 
 BRANCH = "automation/best-known"
-ALLOWED_PREFIXES = (
+REPORT_PATH = Path("leaderboard/best-known.md")
+ALLOWED_FILES = {
     "TableGeneration/BestKnown.lean",
-    "TableGeneration/Policies/Accepted/",
-)
+    str(REPORT_PATH),
+}
+ALLOWED_PREFIX = "TableGeneration/Policies/Accepted/"
 
 
 def run(args: list[str], *, capture: bool = False, check: bool = True) -> str:
@@ -45,7 +47,7 @@ def changed_paths() -> list[str]:
 
 
 def allowed(path: str) -> bool:
-    return path == ALLOWED_PREFIXES[0] or path.startswith(ALLOWED_PREFIXES[1])
+    return path in ALLOWED_FILES or path.startswith(ALLOWED_PREFIX)
 
 
 def compare_url() -> str | None:
@@ -66,7 +68,8 @@ def report_branch() -> None:
     summary = os.getenv("GITHUB_STEP_SUMMARY", "").strip()
     if summary:
         with Path(summary).open("a", encoding="utf-8") as output:
-            output.write("### Best-known table generator\n\n")
+            output.write(REPORT_PATH.read_text(encoding="utf-8"))
+            output.write("\n")
             output.write(f"Verified branch: `{BRANCH}`\n\n")
             if url:
                 output.write(f"[Review changes against main]({url})\n")

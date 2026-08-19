@@ -101,6 +101,9 @@ metrics, and updates `automation/best-known`. Its workflow summary links to the
 diff for manual review and merging into `main`; automation never pushes directly
 to `main`.
 
+The current promoted metrics are listed in
+[`leaderboard/best-known.md`](leaderboard/best-known.md).
+
 ## Scoring
 
 Submissions are scored independently on the active targets they handle. There is

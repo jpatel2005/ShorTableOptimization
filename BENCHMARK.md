@@ -42,6 +42,8 @@ For each successful submission, CI publishes:
   or reprocessed later.
 - `leaderboard/results.json`: the website-oriented policy registry and current
   per-target champions.
+- `leaderboard/best-known.md`: the readable metric table generated with the
+  promoted best-known policy.
 
 The files are stored on the `submission-results` branch and linked from the PR
 comment. Each successful policy commit has one archive directory; reruns update
