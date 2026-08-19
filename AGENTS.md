@@ -7,26 +7,23 @@ submissions.
 
 - Protected verifier code lives in `TableGeneration/Basic.lean`,
   `TableGeneration/Language.lean`, `TableGeneration/Spec.lean`,
-  `TableGeneration/Metrics.lean`, and `TableGeneration/Baseline.lean`.
+  `TableGeneration/Metrics.lean`, `TableGeneration/Baseline.lean`,
+  `TableGeneration/Policy.lean`, and `TableGeneration/BestKnown.lean`.
 - Submission-facing code lives in `TableGeneration/Submission/`.
-- Submitters are expected to edit `TableGeneration/Submission/Defs.lean` and
-  `TableGeneration/Submission/Correctness.lean`.
-- Optional submission helper files may live under
-  `TableGeneration/Submission/`; helper files outside that directory are
-  rejected and should be imported as `TableGeneration.Submission.<Name>` or a
-  nested module path.
+- Submitters implement `GeneratorPolicy` in
+  `TableGeneration/Submission/Policy.lean`; related helpers belong under
+  `TableGeneration/Submission/Policy/`.
+- `TableGeneration/Submission/Defs.lean` and `Correctness.lean` are fixed
+  adapters.
 
 ## Verifier Contract
 
 - Preserve the theorem statements checked by `scripts/verifier.py`.
-- Submissions define their generator in
-  `TableGeneration/Submission/Defs.lean` and prove the required theorem
-  statements in `TableGeneration/Submission/Correctness.lean`.
+- A submitted policy bundles its generator, handled targets, and proofs.
 - `submissionHandles mode k = true` identifies the implemented cases; submitted
   definitions may be general across modes and `k`, or specialized to selected
   targets with fallback elsewhere.
-- `generatePointsInOrder` and `generate` are verifier entry points and must
-  remain identical to the template.
+- Submission adapters and verifier entry points must match the template.
 - The verifier should reject `sorry`, `admit`, new `axiom` or `constant`
   declarations, `unsafe`, and compile-time execution commands in submission
   files.
@@ -40,8 +37,10 @@ submissions.
   skipped and do not receive scores.
 - Successful results and submission source snapshots should be retained on the
   `submission-results` branch.
-- Unhandled submission cases should fall back to the protected baseline
-  generator.
+- Unhandled cases use the protected best-known generator; its final fallback is
+  the general generator.
+- Promotion must rebuild the composed generator, repeat trusted checks, and
+  reproduce every promised benchmark metric before opening a PR to `main`.
 
 ## Checks
 

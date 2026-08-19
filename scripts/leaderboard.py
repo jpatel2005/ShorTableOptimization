@@ -223,7 +223,6 @@ def build_policy(
             "repository",
             "pr_number",
             "head_ref",
-            "head_sha",
             "run_id",
             "run_attempt",
             "created_at",
@@ -237,7 +236,6 @@ def build_policy(
     return {
         "policy_id": policy_id,
         "source": source,
-        "coverage": len(metric_targets),
         "results": [target_entry(metrics, weights) for metrics in metric_targets],
     }
 
@@ -275,7 +273,6 @@ def normalize_policy(
     return {
         "policy_id": policy_id,
         "source": source,
-        "coverage": len(results),
         "results": results,
     }
 
@@ -308,9 +305,18 @@ def build_champions(
         if not candidates:
             continue
         best_cost = min(metrics["weighted_cost"] for _, metrics in candidates)
-        for policy, metrics in sorted(candidates, key=lambda item: item[0]["policy_id"]):
-            if metrics["weighted_cost"] == best_cost:
-                champions.append({"policy_id": policy["policy_id"], **metrics})
+        policy_ids = sorted(
+            policy["policy_id"]
+            for policy, metrics in candidates
+            if metrics["weighted_cost"] == best_cost
+        )
+        champions.append(
+            {
+                "mode": target["mode"],
+                "k": target["k"],
+                "policy_ids": policy_ids,
+            }
+        )
     return champions
 
 
@@ -324,8 +330,8 @@ def update_leaderboard(
     policy = build_policy(result, config, metric_targets)
     policies_by_id: dict[str, dict[str, Any]] = {}
     if existing:
-        if existing.get("schema_version") != 2:
-            raise ValueError("existing leaderboard schema_version must be 2")
+        if existing.get("schema_version") != 3:
+            raise ValueError("existing leaderboard schema_version must be 3")
         if existing.get("challenge") != "table-generation":
             raise ValueError("existing leaderboard challenge must be table-generation")
         for old_policy in existing.get("policies", []):
@@ -338,18 +344,12 @@ def update_leaderboard(
     policies_by_id[policy["policy_id"]] = policy
     policies = sort_policies(list(policies_by_id.values()))
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "challenge": "table-generation",
         "generated_at": utc_now(),
         "benchmark": {
-            "targets": config_targets,
+            "target_matrix": config["target_matrix"],
             "weights": config["weights"],
-            "formula": (
-                "weighted_cost = "
-                f"{config['weights']['arithmetic_operation_count']} * arithmetic_operation_count + "
-                f"{config['weights']['parallel_phase_product_layer_count']} * "
-                "parallel_phase_product_layer_count"
-            ),
         },
         "policies": policies,
         "champions": build_champions(policies, config_targets),
@@ -379,7 +379,10 @@ def main() -> int:
     )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(leaderboard, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    out.write_text(
+        json.dumps(leaderboard, separators=(",", ":"), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     return 0
 
 

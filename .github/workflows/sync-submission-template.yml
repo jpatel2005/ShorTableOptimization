@@ -1,0 +1,27 @@
+name: Sync Submission Template
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-submission-template
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Fast-Forward Template
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward submission template
+        run: git push origin HEAD:submission/template
