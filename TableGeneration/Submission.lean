@@ -1,2 +1,0 @@
-import TableGeneration.Submission.Defs
-import TableGeneration.Submission.Correctness

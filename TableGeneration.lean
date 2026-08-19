@@ -1,6 +1,0 @@
-import TableGeneration.Basic
-import TableGeneration.Language
-import TableGeneration.Spec
-import TableGeneration.Metrics
-import TableGeneration.Baseline
-import TableGeneration.Submission
