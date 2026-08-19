@@ -1,8 +1,7 @@
 # Shor Table Optimization
 
 This repository contains the minimal Lean setup for table-generation
-submissions. It intentionally starts without a website or broader Shor
-implementation code.
+submissions.
 
 ## Repository Layout
 
@@ -90,7 +89,6 @@ point list.
 
 The submitted program may consume the generated points in another order, but
 `generatePointsInOrder` must be a permutation of `generatedPoints`.
-The duplicate check identifies `1` with `1/1` and `-1` with `-1/1`.
 
 The program must consume the generated point order, use only safe arithmetic
 operations, and return to the starting state.
@@ -116,18 +114,15 @@ full verifier, posts a summary comment, and uploads a JSON artifact plus logs.
 Successful submission PRs are closed automatically after the artifact is
 produced.
 
-## Scoring Targets
+## Scoring
 
-The active targets are configured in `leaderboard/config.json`. The template
-starts with an empty target list until the scored cases are selected.
+Submissions are scored on the active target set configured for the repository.
 
 The verifier stores raw metrics for each target. The leaderboard also computes:
 
 ```text
 weighted_cost = arithmetic_operation_count + 5 * parallel_phase_product_layer_count
 ```
-
-Change `leaderboard/config.json` if the target list or weights need to change.
 
 ## Local Checks
 
