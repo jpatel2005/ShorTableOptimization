@@ -1,0 +1,66 @@
+{
+  "challenge": "table-generation",
+  "checks": [
+    {
+      "details": "All required files are present.",
+      "name": "required files exist",
+      "status": "success"
+    },
+    {
+      "details": "Changed files: TableGeneration/Submission/Correctness.lean, TableGeneration/Submission/Defs.lean",
+      "name": "changed files are allowed",
+      "status": "success"
+    },
+    {
+      "details": "The two theorem statements match the template.",
+      "name": "theorem statements are preserved",
+      "status": "success"
+    },
+    {
+      "details": "The generate wrappers match the template.",
+      "name": "wrapper definitions are preserved",
+      "status": "success"
+    },
+    {
+      "details": "No sorry, admit, axiom, constant, unsafe, or compile-time execution commands were found.",
+      "name": "no banned proof shortcuts",
+      "status": "success"
+    },
+    {
+      "details": "Build completed successfully.",
+      "name": "lean build",
+      "status": "success"
+    },
+    {
+      "details": "Only allowed axioms were reported: propext",
+      "name": "axiom dependencies",
+      "status": "success"
+    },
+    {
+      "details": "No scoring target is configured.",
+      "name": "target metrics",
+      "status": "skipped"
+    }
+  ],
+  "metadata": {
+    "base_ref": "submission/template",
+    "base_sha": "e8ad089b6eb427f20e6d330fa013103296634802",
+    "created_at": "2026-08-19T19:05:55.380957Z",
+    "event_name": "pull_request",
+    "head_ref": "submission/search-ptp-k4",
+    "head_sha": "e6ec6ae114006e142fa29a45ef1f34653a6c4706",
+    "pr_number": "3",
+    "repository": "jpatel2005/ShorTableOptimization",
+    "run_attempt": "1",
+    "run_id": "32291079471",
+    "workflow": "Verify Table Generation"
+  },
+  "metrics": {},
+  "phase": "full",
+  "schema_version": 1,
+  "status": "success",
+  "target": {
+    "configured": false,
+    "score": []
+  }
+}
