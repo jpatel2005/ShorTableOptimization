@@ -38,15 +38,15 @@ For each successful submission, CI publishes:
   coverage, raw measurements, and per-target weighted costs.
 - `results.md`: a short report containing the formula and a readable results
   table.
-- `source.zip`: the submitted Lean source, retained so the policy can be
-  inspected or reprocessed later.
+- `source.zip`: the portable policy Lean source, retained so it can be inspected
+  or reprocessed later.
 - `leaderboard/results.json`: the website-oriented policy registry and current
   per-target champions.
 
 The files are stored on the `submission-results` branch and linked from the PR
-comment. Every successful policy is retained for now, not only per-target
-champions. Full verifier output and diagnostic logs remain available as workflow
-artifacts for 90 days.
+comment. Each successful policy commit has one archive directory; reruns update
+it rather than duplicating the source. Full verifier output and diagnostic logs
+remain available as workflow artifacts for 90 days.
 
 Champion policies are composed with the general fallback and promoted through a
 verified `automation/best-known` branch. Promotion repeats correctness checks and

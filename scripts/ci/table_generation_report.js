@@ -25,55 +25,88 @@ async function sourceWorkflowRun(github, context) {
 async function ensureResultsBranch(github, context) {
   const { owner, repo } = context.repo;
   try {
-    await github.rest.git.getRef({ owner, repo, ref: `heads/${RESULTS_BRANCH}` });
-    return;
+    const existing = await github.rest.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${RESULTS_BRANCH}`,
+    });
+    return existing.data.object.sha;
   } catch (error) {
     if (error.status !== 404) throw error;
   }
 
-  const defaultBranch = context.payload.repository?.default_branch || 'main';
-  const base = await github.rest.git.getRef({
+  const tree = await github.rest.git.createTree({ owner, repo, tree: [] });
+  const commit = await github.rest.git.createCommit({
     owner,
     repo,
-    ref: `heads/${defaultBranch}`,
+    message: 'chore(results): initialize generated archive',
+    tree: tree.data.sha,
+    parents: [],
   });
   try {
     await github.rest.git.createRef({
       owner,
       repo,
       ref: `refs/heads/${RESULTS_BRANCH}`,
-      sha: base.data.object.sha,
+      sha: commit.data.sha,
     });
+    return commit.data.sha;
   } catch (error) {
     if (error.status !== 422) throw error;
+    const existing = await github.rest.git.getRef({
+      owner,
+      repo,
+      ref: `heads/${RESULTS_BRANCH}`,
+    });
+    return existing.data.object.sha;
   }
 }
 
-async function persistFile(github, context, storedPath, localPath, message) {
+async function persistFiles(github, context, files, message) {
   const { owner, repo } = context.repo;
-  let existingSha;
-  try {
-    const existing = await github.rest.repos.getContent({
-      owner,
-      repo,
-      path: storedPath,
-      ref: RESULTS_BRANCH,
-    });
-    existingSha = Array.isArray(existing.data) ? undefined : existing.data.sha;
-  } catch (error) {
-    if (error.status !== 404) throw error;
-  }
-
-  const request = {
+  const headSha = await ensureResultsBranch(github, context);
+  const head = await github.rest.git.getCommit({
     owner,
     repo,
-    path: storedPath,
-    branch: RESULTS_BRANCH,
+    commit_sha: headSha,
+  });
+  const entries = [];
+  for (const [storedPath, localPath] of files) {
+    const blob = await github.rest.git.createBlob({
+      owner,
+      repo,
+      content: fs.readFileSync(localPath).toString('base64'),
+      encoding: 'base64',
+    });
+    entries.push({
+      path: storedPath,
+      mode: '100644',
+      type: 'blob',
+      sha: blob.data.sha,
+    });
+  }
+
+  const tree = await github.rest.git.createTree({
+    owner,
+    repo,
+    base_tree: head.data.tree.sha,
+    tree: entries,
+  });
+  if (tree.data.sha === head.data.tree.sha) return;
+
+  const commit = await github.rest.git.createCommit({
+    owner,
+    repo,
     message,
-    content: fs.readFileSync(localPath).toString('base64'),
-  };
-  if (existingSha) request.sha = existingSha;
-  await github.rest.repos.createOrUpdateFileContents(request);
+    tree: tree.data.sha,
+    parents: [headSha],
+  });
+  await github.rest.git.updateRef({
+    owner,
+    repo,
+    ref: `heads/${RESULTS_BRANCH}`,
+    sha: commit.data.sha,
+  });
 }
 
 async function downloadExistingIndex(github, context) {
@@ -135,31 +168,30 @@ async function persistBenchmarkResults({ github, context, core }) {
     throw new Error('Benchmark result does not identify a pull request.');
   }
 
-  const runAttempt = String(
-    result?.submission?.run_attempt || workflowRun.run_attempt || '1'
-  ).trim();
-  const storedDirectory = [
-    'results',
-    `pr-${prNumber}`,
-    `run-${workflowRun.id}-attempt-${runAttempt}`,
-  ].join('/');
+  const policyId = String(
+    result?.submission?.head_sha || workflowRun.head_sha || ''
+  ).toLowerCase().trim();
+  if (!/^[0-9a-f]{40}$/.test(policyId)) {
+    throw new Error('Benchmark result does not identify a policy commit.');
+  }
+  const storedDirectory = `results/policies/${policyId}`;
   const storedResultPath = `${storedDirectory}/results.json`;
   const storedReportPath = `${storedDirectory}/results.md`;
   const storedSourcePath = `${storedDirectory}/source.zip`;
   const storedIndexPath = 'leaderboard/results.json';
-  const message = `chore(results): persist PR ${prNumber} run ${workflowRun.id}`;
+  const message = `chore(results): persist policy ${policyId.slice(0, 12)}`;
 
-  await ensureResultsBranch(github, context);
   const existingIndexPath = await downloadExistingIndex(github, context);
   buildBenchmarkIndex(existingIndexPath);
-  await persistFile(github, context, storedResultPath, resultPath, message);
-  await persistFile(github, context, storedReportPath, reportPath, message);
-  await persistFile(github, context, storedSourcePath, sourcePath, message);
-  await persistFile(
+  await persistFiles(
     github,
     context,
-    storedIndexPath,
-    'artifacts/benchmark-results.json',
+    [
+      [storedResultPath, resultPath],
+      [storedReportPath, reportPath],
+      [storedSourcePath, sourcePath],
+      [storedIndexPath, 'artifacts/benchmark-results.json'],
+    ],
     message
   );
 

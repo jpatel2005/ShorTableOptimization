@@ -1190,7 +1190,8 @@ def verify(repo: Path, out_dir: Path, preflight_only: bool = False) -> dict[str,
 
 def write_source_archive(repo: Path, out_dir: Path) -> None:
     archive_path = out_dir / "table-generation-submission-source.zip"
-    lean_files = sorted((repo / SUBMISSION_DIR).glob("**/*.lean"))
+    helper_root = repo / SUBMISSION_DIR / "Policy"
+    lean_files = [repo / POLICY_FILE, *sorted(helper_root.glob("**/*.lean"))]
     with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in lean_files:
             archive.write(path, arcname=path.relative_to(repo))

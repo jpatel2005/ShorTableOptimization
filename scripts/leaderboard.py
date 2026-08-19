@@ -7,6 +7,7 @@ import argparse
 import datetime as dt
 import json
 from pathlib import Path
+import re
 from typing import Any
 
 
@@ -195,13 +196,14 @@ def target_entry(metrics: dict[str, Any], weights: dict[str, int]) -> dict[str, 
     }
 
 
-def source_archive_path(metadata: dict[str, Any]) -> str:
-    pr_number = str(metadata.get("pr_number") or "").strip()
+def policy_identity(metadata: dict[str, Any]) -> str:
+    head_sha = str(metadata.get("head_sha") or "").strip().lower()
+    if re.fullmatch(r"[0-9a-f]{40}", head_sha):
+        return head_sha
     run_id = str(metadata.get("run_id") or "").strip()
-    run_attempt = str(metadata.get("run_attempt") or "1").strip()
-    if not pr_number or not run_id:
-        return ""
-    return f"results/pr-{pr_number}/run-{run_id}-attempt-{run_attempt}/source.zip"
+    if run_id.isdigit():
+        return f"run-{run_id}"
+    raise ValueError("submission result metadata must identify a policy commit or run")
 
 
 def build_policy(
@@ -211,11 +213,7 @@ def build_policy(
 ) -> dict[str, Any]:
     metadata = result.get("metadata") or {}
     weights = config["weights"]
-    head_sha = str(metadata.get("head_sha") or "").strip()
-    run_id = str(metadata.get("run_id") or "").strip()
-    policy_id = head_sha or (f"run-{run_id}" if run_id else "")
-    if not policy_id:
-        raise ValueError("submission result metadata must include head_sha or run_id")
+    policy_id = policy_identity(metadata)
 
     source = {
         field: metadata[field]
@@ -229,9 +227,7 @@ def build_policy(
         )
         if metadata.get(field) not in (None, "")
     }
-    archive_path = source_archive_path(metadata)
-    if archive_path:
-        source["archive_path"] = archive_path
+    source["archive_path"] = f"results/policies/{policy_id}/source.zip"
 
     return {
         "policy_id": policy_id,
