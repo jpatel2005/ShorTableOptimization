@@ -49,7 +49,7 @@ jobs:
 
       - name: Construct and verify best-known generator
         working-directory: source
-        run: python3 scripts/promote.py --results-root ../published-results
+        run: python3 -m scripts.promote --results-root ../published-results
 
       - name: Open or update promotion PR
         working-directory: source

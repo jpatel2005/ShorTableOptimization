@@ -8,7 +8,7 @@ open Operations
 /-!
 ## Submission Implementation
 
-Edit the four definitions in this section for your submission.
+These fixed adapters expose the portable submitted policy.
 -/
 
 section SubmissionImplementation
