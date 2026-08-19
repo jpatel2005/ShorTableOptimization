@@ -421,38 +421,30 @@ def verify_source(repo: Path, selections: list[dict[str, Any]]) -> None:
 def verify(
     repo: Path,
     config: dict[str, Any],
-    config_targets: list[dict[str, Any]],
     selections: list[dict[str, Any]],
 ) -> None:
     build = run_cmd(["lake", "build", "TableGeneration"], repo)
     if build["returncode"] != 0:
         raise ValueError(f"promoted generator does not build:\n{build['output']}")
     verify_source(repo, selections)
-    selected_by_target = {
-        (selection["mode"], selection["k"]): selection for selection in selections
-    }
-    for target in config_targets:
+    for selection in selections:
+        target = {"mode": selection["mode"], "k": selection["k"]}
         metrics = evaluate_target(repo, target)
-        selection = selected_by_target.get((target["mode"], target["k"]))
-        expected_policy = selection["policy_id"] if selection else "general"
-        if metrics.get("policy_id") != expected_policy:
+        if metrics.get("policy_id") != selection["policy_id"]:
             raise ValueError(
                 f"{target['mode']} k={target['k']} selected {metrics.get('policy_id')} "
-                f"instead of {expected_policy}"
+                f"instead of {selection['policy_id']}"
             )
-        if selection:
-            expected = selection["metrics"]
-            metrics["weighted_cost"] = weighted_cost(metrics, config["weights"])
-            mismatches = [
-                field
-                for field in METRIC_FIELDS
-                if metrics.get(field) != expected.get(field)
-            ]
-            if mismatches:
-                raise ValueError(
-                    f"{target['mode']} k={target['k']} does not reproduce: "
-                    + ", ".join(mismatches)
-                )
+        expected = selection["metrics"]
+        metrics["weighted_cost"] = weighted_cost(metrics, config["weights"])
+        mismatches = [
+            field for field in METRIC_FIELDS if metrics.get(field) != expected.get(field)
+        ]
+        if mismatches:
+            raise ValueError(
+                f"{target['mode']} k={target['k']} does not reproduce: "
+                + ", ".join(mismatches)
+            )
 
 
 def main() -> int:
@@ -481,7 +473,7 @@ def main() -> int:
     config_targets = validate_config(config)
     selections = construct(repo, results_root, leaderboard, config_targets)
     if not args.generate_only:
-        verify(repo, config, config_targets, selections)
+        verify(repo, config, selections)
     print(f"Constructed {len(selections)} promoted target mappings.")
     return 0
 
