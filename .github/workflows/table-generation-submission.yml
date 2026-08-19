@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
     branches:
-      - submission/table-generation/template
+      - submission/template
   workflow_dispatch:
 
 permissions:

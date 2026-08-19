@@ -98,14 +98,14 @@ operations, and return to the starting state.
 After the initial repository state is committed, create the template branch:
 
 ```text
-submission/table-generation/template
+submission/template
 ```
 
 Submission PRs should use:
 
 ```text
-base:    submission/table-generation/template
-compare: submission/table-generation/<name>
+base:    submission/template
+compare: submission/<name>
 ```
 
 GitHub Actions first runs a Python preflight over the submitted files. If that
