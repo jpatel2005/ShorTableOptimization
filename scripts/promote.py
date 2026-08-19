@@ -47,9 +47,9 @@ def read_json(path: Path) -> dict[str, Any]:
 
 def module_id(policy_id: str) -> str:
     if re.fullmatch(r"[0-9a-f]{40,64}", policy_id):
-        return "P" + policy_id
+        return "P" + policy_id[:12]
     digest = hashlib.sha256(policy_id.encode("utf-8")).hexdigest()
-    return "P" + digest[:24]
+    return "P" + digest[:12]
 
 
 def policy_by_id(leaderboard: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -186,7 +186,8 @@ def dispatch_lines(
             f"  {prefix} mode = .{selection['mode']} ∧ k = {selection['k']} then"
         )
         namespace = f"Policies.Accepted.{selection['module_id']}.implementation"
-        lines.append(f"    {namespace}.{field} {arguments}")
+        lines.append(f"    {namespace}.{field}")
+        lines.append(f"      {arguments}")
     lines.append("  else")
     lines.append(f"    {fallback}")
     return lines
@@ -275,6 +276,11 @@ def construct(
     config_targets: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     selections = selected_champions(leaderboard, config_targets)
+    module_ids: dict[str, str] = {}
+    for selection in selections:
+        previous = module_ids.setdefault(selection["module_id"], selection["policy_id"])
+        if previous != selection["policy_id"]:
+            raise ValueError("promoted policy identifiers have a module-name collision")
     accepted = repo / ACCEPTED_ROOT
     if accepted.exists():
         shutil.rmtree(accepted)
