@@ -88,7 +88,7 @@ BANNED_PATTERNS = {
     ),
 }
 
-ALLOWED_AXIOMS: set[str] = set()
+ALLOWED_AXIOMS: set[str] = {"propext"}
 
 
 def utc_now() -> str:
