@@ -40,7 +40,8 @@ submissions.
 - Unhandled cases use the protected best-known generator; its final fallback is
   the general generator.
 - Promotion must rebuild the composed generator, repeat trusted checks, and
-  reproduce every promised benchmark metric before opening a PR to `main`.
+  reproduce every promised benchmark metric before updating
+  `automation/best-known`; only a maintainer merges that branch into `main`.
 
 ## Checks
 

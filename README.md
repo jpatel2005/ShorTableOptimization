@@ -97,7 +97,9 @@ after the results and source are archived.
 
 When a result becomes a per-target champion, trusted automation constructs the
 complete best-known generator, rebuilds Lean, repeats the verifier checks and
-metrics, and opens a promotion PR against `main`.
+metrics, and updates `automation/best-known`. Its workflow summary links to the
+diff for manual review and merging into `main`; automation never pushes directly
+to `main`.
 
 ## Scoring
 

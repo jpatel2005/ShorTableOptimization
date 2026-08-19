@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Publish a verified best-known generator update as a pull request."""
+"""Publish a verified best-known generator to its integration branch."""
 
 from __future__ import annotations
 
-import json
+import os
 from pathlib import Path
 import subprocess
 
 
-BRANCH = "automation/promote-table-generation"
+BRANCH = "automation/best-known"
 ALLOWED_PREFIXES = (
     "TableGeneration/BestKnown.lean",
     "TableGeneration/Policies/Accepted/",
@@ -48,30 +48,32 @@ def allowed(path: str) -> bool:
     return path == ALLOWED_PREFIXES[0] or path.startswith(ALLOWED_PREFIXES[1])
 
 
-def existing_pr() -> int | None:
-    output = run(
-        [
-            "gh",
-            "pr",
-            "list",
-            "--state",
-            "open",
-            "--head",
-            BRANCH,
-            "--json",
-            "number",
-        ],
-        capture=True,
-    )
-    values = json.loads(output)
-    return values[0]["number"] if values else None
+def compare_url() -> str | None:
+    repository = os.getenv("GITHUB_REPOSITORY", "").strip()
+    if not repository:
+        return None
+    server = os.getenv("GITHUB_SERVER_URL", "https://github.com").rstrip("/")
+    return f"{server}/{repository}/compare/main...{BRANCH}?expand=1"
+
+
+def report_branch() -> None:
+    url = compare_url()
+    message = f"Verified best-known branch: {BRANCH}"
+    if url:
+        message += f"\nReview and merge: {url}"
+    print(message)
+
+    summary = os.getenv("GITHUB_STEP_SUMMARY", "").strip()
+    if summary:
+        with Path(summary).open("a", encoding="utf-8") as output:
+            output.write("### Best-known table generator\n\n")
+            output.write(f"Verified branch: `{BRANCH}`\n\n")
+            if url:
+                output.write(f"[Review changes against main]({url})\n")
 
 
 def main() -> int:
     paths = changed_paths()
-    if not paths:
-        print("Best-known generator is already current.")
-        return 0
     disallowed = sorted(path for path in paths if not allowed(path))
     if disallowed:
         raise RuntimeError("promotion modified unexpected paths: " + ", ".join(disallowed))
@@ -86,8 +88,11 @@ def main() -> int:
         ]
     )
     run(["git", "checkout", "-B", BRANCH])
-    run(["git", "add", "--", *paths])
-    run(["git", "commit", "-m", "feat: promote best-known table policies"])
+    if paths:
+        run(["git", "add", "--", *paths])
+        run(["git", "commit", "-m", "feat: promote best-known table policies"])
+    else:
+        print("Best-known generator is already current with main.")
     run(
         [
             "git",
@@ -98,34 +103,7 @@ def main() -> int:
         check=False,
     )
     run(["git", "push", "--force-with-lease", "origin", f"HEAD:{BRANCH}"])
-
-    body = "\n".join(
-        [
-            "Constructs the best-known generator from published per-target champions.",
-            "",
-            "The promotion workflow rebuilt Lean, checked axioms and restricted declarations,",
-            "and reproduced every promised benchmark metric.",
-        ]
-    )
-    number = existing_pr()
-    if number is None:
-        run(
-            [
-                "gh",
-                "pr",
-                "create",
-                "--base",
-                "main",
-                "--head",
-                BRANCH,
-                "--title",
-                "feat: promote best-known table policies",
-                "--body",
-                body,
-            ]
-        )
-    else:
-        run(["gh", "pr", "edit", str(number), "--body", body])
+    report_branch()
     return 0
 
 

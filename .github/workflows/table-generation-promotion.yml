@@ -1,6 +1,8 @@
 name: Promote Best-Known Table Generator
 
 on:
+  push:
+    branches: [main]
   workflow_run:
     workflows: [Report Table Generation Result]
     types: [completed]
@@ -17,12 +19,12 @@ jobs:
     name: Construct and Verify Promotion
     if: >-
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout trusted code
@@ -51,8 +53,6 @@ jobs:
         working-directory: source
         run: python3 -m scripts.promote --results-root ../published-results
 
-      - name: Open or update promotion PR
+      - name: Publish verified best-known branch
         working-directory: source
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/ci/publish_promotion.py

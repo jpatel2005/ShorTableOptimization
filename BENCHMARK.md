@@ -49,5 +49,6 @@ champions. Full verifier output and diagnostic logs remain available as workflow
 artifacts for 90 days.
 
 Champion policies are composed with the general fallback and promoted through a
-verified PR to `main`. Promotion repeats correctness checks and requires the
-published metrics to match.
+verified `automation/best-known` branch. Promotion repeats correctness checks and
+requires the published metrics to match before that branch is updated; a
+maintainer reviews and merges it into `main`.
