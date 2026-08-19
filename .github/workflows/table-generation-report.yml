@@ -1,0 +1,238 @@
+name: Report Table Generation Result
+
+on:
+  workflow_run:
+    workflows: [Verify Table Generation]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Completed verification workflow run ID to report
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: table-report-${{ github.event.workflow_run.id || inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  report:
+    name: Report Result
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+    permissions:
+      actions: read
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Download verification artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: table-generation-submission-${{ github.event.workflow_run.id || inputs.run_id }}
+          path: artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id || inputs.run_id }}
+
+      - name: Persist verifier result
+        id: persist
+        if: hashFiles('artifacts/table-generation-submission-result.json') != ''
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const resultPath = 'artifacts/table-generation-submission-result.json';
+            const result = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+            const sourceRunId = Number(process.env.SOURCE_RUN_ID || 0);
+            if (!Number.isSafeInteger(sourceRunId) || sourceRunId <= 0) {
+              throw new Error('Source workflow run ID is invalid.');
+            }
+            const sourceRun = await github.rest.actions.getWorkflowRun({
+              ...context.repo,
+              run_id: sourceRunId,
+            });
+            const workflowRun = sourceRun.data;
+            const prNumber = String(
+              result?.metadata?.pr_number || workflowRun.pull_requests?.[0]?.number || ''
+            ).trim();
+
+            if (!/^\d+$/.test(prNumber)) {
+              throw new Error('Verifier result does not identify a pull request.');
+            }
+
+            const runAttempt = String(
+              result?.metadata?.run_attempt || workflowRun.run_attempt || '1'
+            ).trim();
+            const branch = 'submission-results';
+            const storedPath = [
+              'results',
+              `pr-${prNumber}`,
+              `run-${workflowRun.id}-attempt-${runAttempt}`,
+              'table-generation-submission-result.json',
+            ].join('/');
+            const { owner, repo } = context.repo;
+
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: `heads/${branch}` });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              const main = await github.rest.git.getRef({ owner, repo, ref: 'heads/main' });
+              try {
+                await github.rest.git.createRef({
+                  owner,
+                  repo,
+                  ref: `refs/heads/${branch}`,
+                  sha: main.data.object.sha,
+                });
+              } catch (createError) {
+                if (createError.status !== 422) throw createError;
+              }
+            }
+
+            let existingSha;
+            try {
+              const existing = await github.rest.repos.getContent({
+                owner,
+                repo,
+                path: storedPath,
+                ref: branch,
+              });
+              existingSha = Array.isArray(existing.data) ? undefined : existing.data.sha;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            const request = {
+              owner,
+              repo,
+              path: storedPath,
+              branch,
+              message: `chore(results): persist PR ${prNumber} run ${workflowRun.id}`,
+              content: fs.readFileSync(resultPath).toString('base64'),
+            };
+            if (existingSha) request.sha = existingSha;
+
+            await github.rest.repos.createOrUpdateFileContents(request);
+
+            const serverUrl = process.env.GITHUB_SERVER_URL || 'https://github.com';
+            const encodedPath = storedPath.split('/').map(encodeURIComponent).join('/');
+            core.setOutput(
+              'result_url',
+              `${serverUrl}/${owner}/${repo}/blob/${branch}/${encodedPath}`,
+            );
+
+      - name: Report PR result
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          DURABLE_RESULT_URL: ${{ steps.persist.outputs.result_url }}
+        with:
+          script: |
+            const fs = require('fs');
+            const summaryPath = 'artifacts/table-generation-summary.md';
+            const resultPath = 'artifacts/table-generation-submission-result.json';
+            const marker = '<!-- table-generation-submission-result -->';
+            const sourceRunId = Number(process.env.SOURCE_RUN_ID || 0);
+            if (!Number.isSafeInteger(sourceRunId) || sourceRunId <= 0) {
+              throw new Error('Source workflow run ID is invalid.');
+            }
+            const sourceRun = await github.rest.actions.getWorkflowRun({
+              ...context.repo,
+              run_id: sourceRunId,
+            });
+            const workflowRun = sourceRun.data;
+            const serverUrl = process.env.GITHUB_SERVER_URL || 'https://github.com';
+            const workflowUrl = `${serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${workflowRun.id}`;
+            const fallback = `${marker}\n### Table generation submission\n\nStatus: **FAILURE**\n\nThe verifier did not produce a summary artifact. Check the workflow run.`;
+            const verifyConclusion = workflowRun.conclusion || '';
+            let body = fs.existsSync(summaryPath) ? fs.readFileSync(summaryPath, 'utf8') : fallback;
+            let result = null;
+
+            if (fs.existsSync(resultPath)) {
+              try {
+                result = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+              } catch (error) {
+                core.warning(`Could not parse verifier result JSON: ${error.message}`);
+              }
+            }
+
+            if (result?.phase === 'preflight' && result.status === 'success' && verifyConclusion !== 'success') {
+              body = `${marker}\n### Table generation submission\n\nStatus: **FAILURE**\n\nPreflight checks passed, but full Lean verification did not complete. Check the workflow run.`;
+            }
+
+            const links = [`[Workflow run](${workflowUrl})`];
+            const durableResultUrl = process.env.DURABLE_RESULT_URL || '';
+            if (durableResultUrl) {
+              links.push(`[Durable result JSON](${durableResultUrl})`);
+            }
+            body = `${body.trimEnd()}\n\n${links.join(' · ')}\n`;
+
+            const prNumber = Number(
+              result?.metadata?.pr_number || workflowRun.pull_requests?.[0]?.number || 0
+            );
+            if (!Number.isInteger(prNumber) || prNumber <= 0) {
+              core.warning('Could not identify the pull request; no comment was posted.');
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+            const existing = comments.find(comment =>
+              comment.user.type === 'Bot' && comment.body.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
+
+            if (!result) {
+              core.info('No result JSON found; leaving PR open.');
+              return;
+            }
+
+            if (verifyConclusion !== 'success') {
+              core.info(`Verification workflow conclusion is ${verifyConclusion}; leaving PR open.`);
+              return;
+            }
+
+            if (result.phase !== 'full') {
+              core.info(`Verifier phase is ${result.phase}; leaving PR open.`);
+              return;
+            }
+
+            if (result.status !== 'success') {
+              core.info(`Submission status is ${result.status}; leaving PR open.`);
+              return;
+            }
+
+            await github.rest.pulls.update({
+              owner,
+              repo,
+              pull_number: prNumber,
+              state: 'closed',
+            });

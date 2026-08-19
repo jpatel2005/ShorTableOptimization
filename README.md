@@ -111,8 +111,10 @@ compare: submission/<name>
 GitHub Actions first runs a Python preflight over the submitted files. If that
 passes, it installs Lean using the base template's `lean-toolchain`, runs the
 full verifier, posts a summary comment, and uploads a JSON artifact plus logs.
-Successful submission PRs are closed automatically after the artifact is
-produced.
+The comment links to the workflow run and to a durable copy of the verifier
+result stored on the `submission-results` branch. Full workflow artifacts and
+diagnostic logs are retained for 90 days. Successful submission PRs are closed
+automatically after the result is reported.
 
 ## Scoring
 
