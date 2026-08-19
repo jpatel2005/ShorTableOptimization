@@ -15,10 +15,9 @@ Each handled target receives its own weighted cost:
 weighted_cost = arithmetic_operation_count + 5 * parallel_phase_product_layer_count
 ```
 
-Lower is better. There is no combined score: coverage and the vector of
-per-target costs describe a policy. The benchmark records the champion or tied
-champions for each `(mode, k)` target, so different policies may be optimal in
-different cells.
+There is no combined score: coverage and the vector of per-target costs describe
+a policy. The benchmark records the champion or tied champions for each
+`(mode, k)` target, so different policies may be optimal in different cells.
 
 The report also includes the unweighted measurements used to understand a
 submission:

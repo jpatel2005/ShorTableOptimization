@@ -972,7 +972,8 @@ def build_benchmark_markdown(benchmark: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            f"Scoring: `{score_formula(weights)}`. Lower is better.",
+            f"Scoring: `{score_formula(weights)}`.",
+            "",
             f"Coverage: **{len(benchmark['results'])} of {configured_target_count}** targets.",
             "",
             "| Target | Weighted cost | Arithmetic ops | Parallel layers | Phase products | Total ops | Generated points |",
