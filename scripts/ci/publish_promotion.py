@@ -25,7 +25,9 @@ def run(args: list[str], *, capture: bool = False, check: bool = True) -> str:
     )
     if check and completed.returncode != 0:
         raise RuntimeError(completed.stdout or f"command failed: {' '.join(args)}")
-    return (completed.stdout or "").strip()
+    # Preserve the leading columns in machine-readable `git status --short`
+    # output; callers that parse JSON tolerate trailing whitespace.
+    return (completed.stdout or "").rstrip("\n")
 
 
 def changed_paths() -> list[str]:
