@@ -1,0 +1,8 @@
+.lake/
+lake-packages/
+*.olean
+*.ilean
+*.trace
+artifacts/
+__pycache__/
+*.pyc

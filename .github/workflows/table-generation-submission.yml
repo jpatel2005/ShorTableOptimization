@@ -1,0 +1,192 @@
+name: Verify Table Generation
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches:
+      - submission/table-generation/template
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: table-submission-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verifier
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout submission
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          path: submission
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Checkout verifier
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
+          path: verifier
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+
+      - name: Read scoring config
+        id: scoring
+        working-directory: verifier
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          with open("leaderboard/config.json", encoding="utf-8") as handle:
+              config = json.load(handle)
+          targets = json.dumps(config.get("targets", []), separators=(",", ":"))
+          print(f"targets={targets}")
+          PY
+
+      - name: Run verifier preflight
+        working-directory: submission
+        env:
+          TABLE_GEN_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          TABLE_GEN_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          TABLE_GEN_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TABLE_GEN_BASE_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
+          TABLE_GEN_TARGETS: ${{ steps.scoring.outputs.targets }}
+        run: |
+          python3 ../verifier/scripts/verifier.py --out-dir artifacts --preflight-only
+
+      - name: Install Lean
+        working-directory: verifier
+        run: |
+          set -euo pipefail
+          curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain "$(cat lean-toolchain)"
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Run verifier
+        working-directory: submission
+        env:
+          TABLE_GEN_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          TABLE_GEN_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
+          TABLE_GEN_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          TABLE_GEN_BASE_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
+          TABLE_GEN_TARGETS: ${{ steps.scoring.outputs.targets }}
+        run: |
+          python3 ../verifier/scripts/verifier.py --out-dir artifacts
+
+      - name: Upload verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: table-generation-submission-${{ github.run_id }}
+          path: submission/artifacts/
+          if-no-files-found: warn
+
+  report:
+    name: Report Result
+    needs: verify
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Download verification artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: table-generation-submission-${{ github.run_id }}
+          path: artifacts
+
+      - name: Report PR result
+        uses: actions/github-script@v7
+        env:
+          VERIFY_JOB_RESULT: ${{ needs.verify.result }}
+        with:
+          script: |
+            const fs = require('fs');
+            const summaryPath = 'artifacts/table-generation-summary.md';
+            const resultPath = 'artifacts/table-generation-submission-result.json';
+            const marker = '<!-- table-generation-submission-result -->';
+            const fallback = `${marker}\n### Table generation submission\n\nStatus: **FAILURE**\n\nThe verifier did not produce a summary artifact. Check the workflow logs.`;
+            const verifyJobResult = process.env.VERIFY_JOB_RESULT || '';
+            let body = fs.existsSync(summaryPath) ? fs.readFileSync(summaryPath, 'utf8') : fallback;
+            let result = null;
+
+            if (fs.existsSync(resultPath)) {
+              try {
+                result = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
+              } catch (error) {
+                core.warning(`Could not parse verifier result JSON: ${error.message}`);
+              }
+            }
+
+            if (result?.phase === 'preflight' && result.status === 'success' && verifyJobResult !== 'success') {
+              body = `${marker}\n### Table generation submission\n\nStatus: **FAILURE**\n\nPreflight checks passed, but full Lean verification did not complete. Check the workflow logs.`;
+            }
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const existing = comments.data.find(comment =>
+              comment.user.type === 'Bot' && comment.body.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
+
+            if (!result) {
+              core.info('No result JSON found; leaving PR open.');
+              return;
+            }
+
+            if (verifyJobResult !== 'success') {
+              core.info(`Verification job result is ${verifyJobResult}; leaving PR open.`);
+              return;
+            }
+
+            if (result.phase !== 'full') {
+              core.info(`Verifier phase is ${result.phase}; leaving PR open.`);
+              return;
+            }
+
+            if (result.status !== 'success') {
+              core.info(`Submission status is ${result.status}; leaving PR open.`);
+              return;
+            }
+
+            await github.rest.pulls.update({
+              owner,
+              repo,
+              pull_number: context.issue.number,
+              state: 'closed',
+            });

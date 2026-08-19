@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "targets": [],
+  "weights": {
+    "arithmetic_operation_count": 1,
+    "parallel_phase_product_layer_count": 5
+  }
+}
