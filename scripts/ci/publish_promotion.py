@@ -29,7 +29,10 @@ def run(args: list[str], *, capture: bool = False, check: bool = True) -> str:
 
 
 def changed_paths() -> list[str]:
-    output = run(["git", "status", "--short"], capture=True)
+    output = run(
+        ["git", "status", "--short", "--untracked-files=all"],
+        capture=True,
+    )
     paths = []
     for line in output.splitlines():
         path = line[3:].strip()
