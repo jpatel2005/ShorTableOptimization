@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout submission
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           path: submission
@@ -33,7 +33,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Checkout verifier
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.base.repo.full_name || github.repository }}
           path: verifier
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload verification artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: table-generation-submission-${{ github.run_id }}
           path: submission/artifacts/
