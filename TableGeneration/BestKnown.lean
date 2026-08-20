@@ -1,4 +1,5 @@
 import TableGeneration.Policy
+import TableGeneration.Policies.Accepted.P52ec6fce9b57
 import TableGeneration.Policies.Accepted.P6f7d25984ff8
 import TableGeneration.Policies.Accepted.P82eaf805f71c
 
@@ -13,7 +14,7 @@ def bestKnownGeneratedPoints (mode : ProductMode) (k : Nat) : List Point :=
     Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 2 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.P52ec6fce9b57.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 3 then
     Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
@@ -108,7 +109,7 @@ def bestKnownGeneratePointsInOrder
     Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 2 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.P52ec6fce9b57.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 3 then
     Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
@@ -203,7 +204,7 @@ def bestKnownGenerate
     Policies.Accepted.P6f7d25984ff8.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 2 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.P52ec6fce9b57.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 3 then
     Policies.Accepted.P6f7d25984ff8.implementation.generate
@@ -296,7 +297,7 @@ def bestKnownPolicyId (mode : ProductMode) (k : Nat) : String :=
   if mode = .PhaseProduct ∧ k = 2 then
     "6f7d25984ff8f4db772a7449c097a6e16098f8be"
   else if mode = .PhaseTripleProduct ∧ k = 2 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "52ec6fce9b57cf5a3b2b3ed34b6d1e61f6cbaade"
   else if mode = .PhaseProduct ∧ k = 3 then
     "6f7d25984ff8f4db772a7449c097a6e16098f8be"
   else if mode = .PhaseTripleProduct ∧ k = 3 then
