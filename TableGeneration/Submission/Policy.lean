@@ -1,9 +1,8 @@
-import TableGeneration.Policy
+import TableGeneration.Submission.Policy.GeneralParity
 
 namespace TableGeneration.Submission.Policy
 
-/-- Replace this empty policy with the submitted implementation. -/
 def implementation : TableGeneration.GeneratorPolicy :=
-  .empty
+  GeneralParity.implementation
 
 end TableGeneration.Submission.Policy
