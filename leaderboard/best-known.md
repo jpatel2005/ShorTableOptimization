@@ -7,7 +7,7 @@ Coverage: **30 of 30** targets.
 | Target | Weighted cost | Arithmetic ops | Parallel layers | Phase products | Total ops | Generated points |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `PhaseProduct` `k=2` | **12** | 2 | 2 | 3 | 5 | 3 |
-| `PhaseTripleProduct` `k=2` | **18** | 8 | 2 | 4 | 12 | 4 |
+| `PhaseTripleProduct` `k=2` | **14** | 4 | 2 | 4 | 8 | 4 |
 | `PhaseProduct` `k=3` | **22** | 12 | 2 | 5 | 17 | 5 |
 | `PhaseTripleProduct` `k=3` | **31** | 16 | 3 | 7 | 23 | 7 |
 | `PhaseProduct` `k=4` | **43** | 28 | 3 | 7 | 35 | 7 |
