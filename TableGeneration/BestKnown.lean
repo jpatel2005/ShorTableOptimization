@@ -1,7 +1,7 @@
 import TableGeneration.Policy
 import TableGeneration.Policies.Accepted.P52ec6fce9b57
 import TableGeneration.Policies.Accepted.P6f7d25984ff8
-import TableGeneration.Policies.Accepted.P82eaf805f71c
+import TableGeneration.Policies.Accepted.Pf4aff955f16b
 
 namespace TableGeneration
 
@@ -17,88 +17,88 @@ def bestKnownGeneratedPoints (mode : ProductMode) (k : Nat) : List Point :=
     Policies.Accepted.P52ec6fce9b57.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 3 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 3 then
     Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 4 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 4 then
-    Policies.Accepted.P82eaf805f71c.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 5 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 5 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 6 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 6 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 7 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 7 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 8 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 8 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 9 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 9 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 10 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 10 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 11 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 11 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 12 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 12 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 13 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 13 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 14 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 14 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 15 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 15 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 16 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 16 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatedPoints
+    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else
     baselineGeneratedPoints mode k
@@ -112,88 +112,88 @@ def bestKnownGeneratePointsInOrder
     Policies.Accepted.P52ec6fce9b57.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 3 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 3 then
     Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 4 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 4 then
-    Policies.Accepted.P82eaf805f71c.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 5 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 5 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 6 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 6 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 7 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 7 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 8 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 8 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 9 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 9 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 10 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 10 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 11 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 11 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 12 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 12 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 13 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 13 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 14 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 14 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 15 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 15 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 16 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 16 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generatePointsInOrder
+    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else
     baselineGeneratePointsInOrder mode k hk
@@ -207,88 +207,88 @@ def bestKnownGenerate
     Policies.Accepted.P52ec6fce9b57.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 3 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 3 then
     Policies.Accepted.P6f7d25984ff8.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 4 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 4 then
-    Policies.Accepted.P82eaf805f71c.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 5 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 5 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 6 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 6 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 7 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 7 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 8 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 8 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 9 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 9 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 10 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 10 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 11 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 11 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 12 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 12 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 13 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 13 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 14 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 14 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 15 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 15 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 16 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 16 then
-    Policies.Accepted.P6f7d25984ff8.implementation.generate
+    Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else
     baselineGenerate mode k hk
@@ -299,61 +299,61 @@ def bestKnownPolicyId (mode : ProductMode) (k : Nat) : String :=
   else if mode = .PhaseTripleProduct ∧ k = 2 then
     "52ec6fce9b57cf5a3b2b3ed34b6d1e61f6cbaade"
   else if mode = .PhaseProduct ∧ k = 3 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 3 then
     "6f7d25984ff8f4db772a7449c097a6e16098f8be"
   else if mode = .PhaseProduct ∧ k = 4 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 4 then
-    "82eaf805f71cc6a0dd8154007729d14b9f63d601"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 5 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 5 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 6 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 6 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 7 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 7 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 8 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 8 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 9 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 9 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 10 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 10 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 11 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 11 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 12 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 12 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 13 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 13 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 14 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 14 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 15 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 15 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 16 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 16 then
-    "6f7d25984ff8f4db772a7449c097a6e16098f8be"
+    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else
     "general"
 
