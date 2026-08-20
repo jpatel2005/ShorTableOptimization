@@ -32,6 +32,9 @@ submission:
 
 ## Published Results
 
+The current per-target champions are displayed on the
+[leaderboard website](https://jpatel2005.github.io/ShorTableOptimization/).
+
 For each successful submission, CI publishes:
 
 - `results.json`: a compact record of the submission identity, benchmark weights,

@@ -18,6 +18,7 @@ submissions.
   fallback.
 - `TableGeneration/Submission/Policy.lean` contains the submitted policy.
 - `leaderboard/config.json` defines the active targets and score weights.
+- `leaderboard/site/index.html` is the static leaderboard website.
 - `scripts/verifier.py` is the CI verifier.
 - `scripts/leaderboard.py` updates the website benchmark JSON from successful
   verifier artifacts.
@@ -96,10 +97,11 @@ retained for 90 days. Successful submission PRs are closed automatically only
 after the results and source are archived.
 
 When a result becomes a per-target champion, trusted automation constructs the
-complete best-known generator, rebuilds Lean, repeats the verifier checks and
-metrics, and updates `automation/best-known`. Its workflow summary links to the
-diff for manual review and merging into `main`; automation never pushes directly
-to `main`.
+complete best-known generator, rebuilds Lean, audits the target proofs, reproduces
+the metrics, and updates `automation/best-known`. Its workflow summary links to the
+[comparison for creating a PR](https://github.com/jpatel2005/ShorTableOptimization/compare/main...automation/best-known?expand=1)
+for manual review and merging into `main`; automation never pushes directly to
+`main`.
 
 The current promoted metrics are listed in
 [`leaderboard/best-known.md`](leaderboard/best-known.md).
@@ -108,7 +110,9 @@ The current promoted metrics are listed in
 
 Submissions are scored independently on the active targets they handle. There is
 no combined score across targets. See [BENCHMARK.md](BENCHMARK.md) for the
-current targets, weights, metric definitions, and published result formats.
+current targets, weights, metric definitions, and published result formats. The
+current results are available on the
+[leaderboard website](https://jpatel2005.github.io/ShorTableOptimization/).
 
 ## Local Checks
 
