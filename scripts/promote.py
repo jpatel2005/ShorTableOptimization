@@ -325,58 +325,55 @@ def construct(
     return selections
 
 
-def evaluate_target(repo: Path, target: dict[str, Any]) -> dict[str, Any]:
-    mode = target["mode"]
-    k = target["k"]
-    source = "\n".join(
-        [
-            "import TableGeneration.BestKnown",
-            "import TableGeneration.Metrics",
-            "",
-            "open TableGeneration",
-            "open TableGeneration.Operations",
-            "",
-            f"def targetMode : ProductMode := .{mode}",
-            f"def targetK : Nat := {k}",
-            "def targetProgram : Prog targetK := bestKnownGenerate targetMode targetK (by decide)",
-            "def targetPoints : List Point := bestKnownGeneratedPoints targetMode targetK",
-            "def targetOrder : List Point := bestKnownGeneratePointsInOrder targetMode targetK (by decide)",
-            "",
-            '#eval IO.println "PROMOTION_METRICS_BEGIN"',
-            f'#eval IO.println ("mode={mode}")',
-            f'#eval IO.println ("k={k}")',
-            '#eval IO.println ("policy_id=" ++ bestKnownPolicyId targetMode targetK)',
-            '#eval IO.println ("total_operation_count=" ++ toString targetProgram.length)',
-            '#eval IO.println ("arithmetic_operation_count=" ++ toString (arithmeticOperationCount targetProgram))',
-            '#eval IO.println ("phase_product_count=" ++ toString (phaseProductCount targetProgram))',
-            '#eval IO.println ("parallel_phase_product_layer_count=" ++ toString (parallelPhaseProductLayerCount targetProgram))',
-            '#eval IO.println ("expected_point_count=" ++ toString (targetMode.pointCount targetK))',
-            '#eval IO.println ("point_count=" ++ toString targetPoints.length)',
-            '#eval IO.println ("point_order_count=" ++ toString targetOrder.length)',
-            '#eval IO.println ("generated_points_all_valid=" ++ toString (targetPoints.all validPoint?))',
-            '#eval IO.println ("generated_points_distinct=" ++ toString (decide (targetPoints.map normalizePoint).Nodup))',
-            '#eval IO.println ("point_order_valid=" ++ toString (decide (targetOrder.Perm targetPoints)))',
-            '#eval IO.println ("consumes=" ++ toString (progConsumesPts? (positive_of_ge_two (by decide)) State.start_state targetProgram targetOrder))',
-            '#eval IO.println ("safe=" ++ toString (safeProg? targetProgram))',
-            '#eval IO.println ("returns=" ++ toString (returnsToStartCheck targetProgram State.start_state))',
-            '#eval IO.println ("points=" ++ joinComma (targetPoints.map pointToString))',
-            '#eval IO.println ("point_order=" ++ joinComma (targetOrder.map pointToString))',
-            '#eval IO.println ("program=" ++ progToString targetProgram)',
-            '#eval IO.println "PROMOTION_METRICS_END"',
-            "",
-        ]
-    )
+def evaluate_targets(
+    repo: Path, selections: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Reproduce all metrics together; verify_source checks the Lean proofs."""
+    source = [
+        "import TableGeneration.BestKnown",
+        "import TableGeneration.Metrics",
+        "",
+        "open TableGeneration",
+        "open TableGeneration.Operations",
+        "",
+    ]
+    for index, selection in enumerate(selections):
+        mode = selection["mode"]
+        k = selection["k"]
+        source.extend(
+            [
+                f"def targetMode{index} : ProductMode := .{mode}",
+                f"def targetK{index} : Nat := {k}",
+                f"def targetProgram{index} : Prog targetK{index} := "
+                f"bestKnownGenerate targetMode{index} targetK{index} (by decide)",
+                f"def targetPoints{index} : List Point := "
+                f"bestKnownGeneratedPoints targetMode{index} targetK{index}",
+                f"def targetOrder{index} : List Point := "
+                f"bestKnownGeneratePointsInOrder targetMode{index} targetK{index} "
+                "(by decide)",
+                "",
+                f'#eval IO.println "PROMOTION_METRICS_BEGIN:{index}"',
+                f'#eval IO.println ("mode={mode}")',
+                f'#eval IO.println ("k={k}")',
+                f'#eval IO.println ("policy_id=" ++ bestKnownPolicyId targetMode{index} targetK{index})',
+                f'#eval IO.println ("total_operation_count=" ++ toString targetProgram{index}.length)',
+                f'#eval IO.println ("arithmetic_operation_count=" ++ toString (arithmeticOperationCount targetProgram{index}))',
+                f'#eval IO.println ("phase_product_count=" ++ toString (phaseProductCount targetProgram{index}))',
+                f'#eval IO.println ("parallel_phase_product_layer_count=" ++ toString (parallelPhaseProductLayerCount targetProgram{index}))',
+                f'#eval IO.println ("expected_point_count=" ++ toString (targetMode{index}.pointCount targetK{index}))',
+                f'#eval IO.println ("point_count=" ++ toString targetPoints{index}.length)',
+                f'#eval IO.println ("point_order_count=" ++ toString targetOrder{index}.length)',
+                f'#eval IO.println "PROMOTION_METRICS_END:{index}"',
+                "",
+            ]
+        )
     with tempfile.TemporaryDirectory() as tmp:
         source_path = Path(tmp) / "EvaluateBestKnown.lean"
-        source_path.write_text(source, encoding="utf-8")
-        result = run_cmd(["lake", "env", "lean", str(source_path)], repo, 600)
+        source_path.write_text("\n".join(source), encoding="utf-8")
+        result = run_cmd(["lake", "env", "lean", str(source_path)], repo, 300)
     if result["returncode"] != 0:
-        raise ValueError(f"could not evaluate {mode} k={k}: {result['output']}")
-    metrics = parse_metric_output(
-        str(result["output"]),
-        begin="PROMOTION_METRICS_BEGIN",
-        end="PROMOTION_METRICS_END",
-    )
+        raise ValueError(f"could not evaluate promoted metrics: {result['output']}")
+
     integer_fields = (
         "k",
         "total_operation_count",
@@ -387,26 +384,33 @@ def evaluate_target(repo: Path, target: dict[str, Any]) -> dict[str, Any]:
         "point_count",
         "point_order_count",
     )
-    for field in integer_fields:
-        metrics[field] = int(metrics[field])
-    boolean_fields = (
-        "generated_points_all_valid",
-        "generated_points_distinct",
-        "point_order_valid",
-        "consumes",
-        "safe",
-        "returns",
-    )
-    if any(metrics.get(field) != "true" for field in boolean_fields):
-        failures = [field for field in boolean_fields if metrics.get(field) != "true"]
-        raise ValueError(f"{mode} k={k} failed checks: {', '.join(failures)}")
-    if metrics["point_count"] != metrics["expected_point_count"]:
-        raise ValueError(f"{mode} k={k} generated the wrong number of points")
-    if metrics["point_order_count"] != metrics["point_count"]:
-        raise ValueError(f"{mode} k={k} point order length is invalid")
-    if metrics["phase_product_count"] != metrics["point_count"]:
-        raise ValueError(f"{mode} k={k} phase-product count is invalid")
-    return metrics
+    evaluated = []
+    for index, selection in enumerate(selections):
+        mode = selection["mode"]
+        k = selection["k"]
+        metrics = parse_metric_output(
+            str(result["output"]),
+            begin=f"PROMOTION_METRICS_BEGIN:{index}",
+            end=f"PROMOTION_METRICS_END:{index}",
+        )
+        required = {"mode", "policy_id", *integer_fields}
+        missing = sorted(required - metrics.keys())
+        if missing:
+            raise ValueError(
+                f"could not read {mode} k={k} metrics: {', '.join(missing)} missing"
+            )
+        for field in integer_fields:
+            metrics[field] = int(metrics[field])
+        if metrics["mode"] != mode or metrics["k"] != k:
+            raise ValueError(f"promoted metric target {index} is mislabeled")
+        if metrics["point_count"] != metrics["expected_point_count"]:
+            raise ValueError(f"{mode} k={k} generated the wrong number of points")
+        if metrics["point_order_count"] != metrics["point_count"]:
+            raise ValueError(f"{mode} k={k} point order length is invalid")
+        if metrics["phase_product_count"] != metrics["point_count"]:
+            raise ValueError(f"{mode} k={k} phase-product count is invalid")
+        evaluated.append(metrics)
+    return evaluated
 
 
 def verify_source(repo: Path, selections: list[dict[str, Any]]) -> None:
@@ -465,9 +469,9 @@ def verify(
     if build["returncode"] != 0:
         raise ValueError(f"promoted generator does not build:\n{build['output']}")
     verify_source(repo, selections)
-    for selection in selections:
+    evaluated = evaluate_targets(repo, selections)
+    for selection, metrics in zip(selections, evaluated, strict=True):
         target = {"mode": selection["mode"], "k": selection["k"]}
-        metrics = evaluate_target(repo, target)
         if metrics.get("policy_id") != selection["policy_id"]:
             raise ValueError(
                 f"{target['mode']} k={target['k']} selected {metrics.get('policy_id')} "
