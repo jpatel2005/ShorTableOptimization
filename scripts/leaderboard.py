@@ -19,6 +19,25 @@ REQUIRED_METRICS = {
     "total_operation_count",
     "point_count",
 }
+OPERATION_PATTERNS = (
+    (re.compile(r"\(shiftL, reg=(\d+), by=(\d+)\)"), "shiftL"),
+    (re.compile(r"\(shiftR, reg=(\d+), by=(\d+)\)"), "shiftR"),
+    (re.compile(r"\(negate, reg=(\d+)\)"), "negate"),
+    (
+        re.compile(
+            r"\(addScaled, dst=(\d+), src=(\d+), sign=([+-])1, shift=(\d+)\)"
+        ),
+        "addScaled",
+    ),
+    (re.compile(r"\(phaseProduct, reg=(\d+)\)"), "phaseProduct"),
+)
+OPERATION_FORMAT = {
+    "shiftL": ["register", "amount"],
+    "shiftR": ["register", "amount"],
+    "negate": ["register"],
+    "addScaled": ["destination", "source", "source_sign", "shift"],
+    "phaseProduct": ["register"],
+}
 
 
 def utc_now() -> str:
@@ -181,6 +200,43 @@ def weighted_cost(metrics: dict[str, Any], weights: dict[str, int]) -> int:
     )
 
 
+def parse_point_list(raw: Any, field: str) -> list[str]:
+    if not isinstance(raw, str) or not raw.startswith("[") or not raw.endswith("]"):
+        raise ValueError(f"metric {field} must be a rendered point list")
+    inner = raw[1:-1]
+    return [] if not inner else inner.split(", ")
+
+
+def parse_operations(raw: Any) -> list[list[str | int]]:
+    if not isinstance(raw, str) or not raw.startswith("[") or not raw.endswith("]"):
+        raise ValueError("metric program must be a rendered operation list")
+    if raw == "[]":
+        return []
+    if not raw.startswith("[(") or not raw.endswith(")]"):
+        raise ValueError("metric program has an invalid operation list")
+
+    rendered = [f"({item})" for item in raw[2:-2].split("), (")]
+    operations: list[list[str | int]] = []
+    for operation in rendered:
+        for pattern, name in OPERATION_PATTERNS:
+            match = pattern.fullmatch(operation)
+            if match is None:
+                continue
+            values: list[str | int] = [name]
+            for value in match.groups():
+                if value == "+":
+                    values.append(1)
+                elif value == "-":
+                    values.append(-1)
+                else:
+                    values.append(int(value))
+            operations.append(values)
+            break
+        else:
+            raise ValueError(f"metric program contains an unknown operation: {operation}")
+    return operations
+
+
 def target_entry(metrics: dict[str, Any], weights: dict[str, int]) -> dict[str, Any]:
     return {
         "mode": metrics["mode"],
@@ -204,6 +260,41 @@ def policy_identity(metadata: dict[str, Any]) -> str:
     if run_id.isdigit():
         return f"run-{run_id}"
     raise ValueError("submission result metadata must identify a policy commit or run")
+
+
+def build_operations_result(
+    result: dict[str, Any], metric_targets: list[dict[str, Any]]
+) -> dict[str, Any]:
+    targets = []
+    for metrics in metric_targets:
+        operations = parse_operations(metrics.get("program"))
+        generated_points = parse_point_list(metrics.get("points"), "points")
+        point_order = parse_point_list(metrics.get("point_order"), "point_order")
+        if len(operations) != int_metric(metrics, "total_operation_count"):
+            raise ValueError("rendered operation count does not match total_operation_count")
+        if sum(operation[0] == "phaseProduct" for operation in operations) != int_metric(
+            metrics, "phase_product_count"
+        ):
+            raise ValueError("rendered phase-product count does not match metrics")
+        if len(generated_points) != int_metric(metrics, "point_count"):
+            raise ValueError("rendered generated-point count does not match metrics")
+        if len(point_order) != int_metric(metrics, "point_count"):
+            raise ValueError("rendered point-order count does not match metrics")
+        targets.append(
+            {
+                "mode": metrics["mode"],
+                "k": metrics["k"],
+                "generated_points": generated_points,
+                "point_order": point_order,
+                "operations": operations,
+            }
+        )
+    return {
+        "schema_version": 1,
+        "policy_id": policy_identity(result.get("metadata") or {}),
+        "operation_format": OPERATION_FORMAT,
+        "targets": targets,
+    }
 
 
 def build_policy(
@@ -231,6 +322,7 @@ def build_policy(
 
     return {
         "policy_id": policy_id,
+        "operations_path": f"results/policies/{policy_id}/operations.json",
         "source": source,
         "results": [target_entry(metrics, weights) for metrics in metric_targets],
     }
@@ -266,11 +358,15 @@ def normalize_policy(
         results.append(target_entry(metrics, weights))
     if not results:
         return None
-    return {
+    normalized = {
         "policy_id": policy_id,
         "source": source,
         "results": results,
     }
+    operations_path = policy.get("operations_path")
+    if isinstance(operations_path, str):
+        normalized["operations_path"] = operations_path
+    return normalized
 
 
 def sort_policies(policies: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -358,6 +454,7 @@ def main() -> int:
     parser.add_argument("--config", default="leaderboard/config.json", help="Leaderboard config.")
     parser.add_argument("--existing", default="", help="Existing leaderboard JSON, if present.")
     parser.add_argument("--out", required=True, help="Output leaderboard JSON.")
+    parser.add_argument("--operations-out", default="", help="Detailed operations JSON.")
     args = parser.parse_args()
 
     config = read_json(Path(args.config))
@@ -379,6 +476,18 @@ def main() -> int:
         json.dumps(leaderboard, separators=(",", ":"), sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    if args.operations_out:
+        operations_out = Path(args.operations_out)
+        operations_out.parent.mkdir(parents=True, exist_ok=True)
+        operations_out.write_text(
+            json.dumps(
+                build_operations_result(result, metric_targets),
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     return 0
 
 

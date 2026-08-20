@@ -41,6 +41,10 @@ For each successful submission, CI publishes:
   coverage, raw measurements, and per-target weighted costs.
 - `results.md`: a short report containing the formula and a readable results
   table.
+- `operations.json`: generated points, consumption order, and the complete
+  operation sequence for every handled target. Operations use compact arrays of
+  the form `[name, ...arguments]`; the file includes the argument names for each
+  operation kind.
 - `source.zip`: the portable policy Lean source, retained so it can be inspected
   or reprocessed later.
 - `leaderboard/results.json`: the website-oriented policy registry and current

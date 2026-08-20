@@ -139,6 +139,8 @@ function buildBenchmarkIndex(existingPath) {
     'leaderboard/config.json',
     '--out',
     'artifacts/benchmark-results.json',
+    '--operations-out',
+    'artifacts/benchmark-operations.json',
   ];
   if (existingPath) args.push('--existing', existingPath);
   childProcess.execFileSync('python3', args, { stdio: 'inherit' });
@@ -155,6 +157,7 @@ async function persistBenchmarkResults({ github, context, core }) {
   const resultPath = 'artifacts/table-generation-results.json';
   const reportPath = 'artifacts/table-generation-results.md';
   const sourcePath = 'artifacts/table-generation-submission-source.zip';
+  const operationsPath = 'artifacts/benchmark-operations.json';
   const result = JSON.parse(fs.readFileSync(resultPath, 'utf8'));
   const workflowRun = await sourceWorkflowRun(github, context);
   if (workflowRun.conclusion !== 'success') {
@@ -178,6 +181,7 @@ async function persistBenchmarkResults({ github, context, core }) {
   const storedResultPath = `${storedDirectory}/results.json`;
   const storedReportPath = `${storedDirectory}/results.md`;
   const storedSourcePath = `${storedDirectory}/source.zip`;
+  const storedOperationsPath = `${storedDirectory}/operations.json`;
   const storedIndexPath = 'leaderboard/results.json';
   const message = `chore(results): persist policy ${policyId.slice(0, 12)}`;
 
@@ -190,6 +194,7 @@ async function persistBenchmarkResults({ github, context, core }) {
       [storedResultPath, resultPath],
       [storedReportPath, reportPath],
       [storedSourcePath, sourcePath],
+      [storedOperationsPath, operationsPath],
       [storedIndexPath, 'artifacts/benchmark-results.json'],
     ],
     message
@@ -198,6 +203,7 @@ async function persistBenchmarkResults({ github, context, core }) {
   core.setOutput('results_json_url', repositoryFileUrl(context, storedResultPath));
   core.setOutput('results_report_url', repositoryFileUrl(context, storedReportPath));
   core.setOutput('source_archive_url', repositoryFileUrl(context, storedSourcePath));
+  core.setOutput('operations_json_url', repositoryFileUrl(context, storedOperationsPath));
   core.setOutput('benchmark_index_url', repositoryFileUrl(context, storedIndexPath));
 }
 
@@ -282,6 +288,9 @@ async function reportPullRequestResult({ github, context, core }) {
   }
   if (process.env.RESULTS_JSON_URL) {
     links.push(`[Results JSON](${process.env.RESULTS_JSON_URL})`);
+  }
+  if (process.env.OPERATIONS_JSON_URL) {
+    links.push(`[Operations JSON](${process.env.OPERATIONS_JSON_URL})`);
   }
   if (process.env.BENCHMARK_INDEX_URL) {
     links.push(`[Benchmark JSON](${process.env.BENCHMARK_INDEX_URL})`);

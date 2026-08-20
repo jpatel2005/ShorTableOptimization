@@ -43,12 +43,11 @@ jobs:
           persist-credentials: false
 
       - name: Stage site
-        run: |
-          set -euo pipefail
-          python3 -m json.tool published-results/leaderboard/results.json >/dev/null
-          mkdir public
-          cp source/leaderboard/site/index.html public/index.html
-          cp published-results/leaderboard/results.json public/results.json
+        run: >-
+          python3 source/scripts/ci/stage_leaderboard_site.py
+          --site source/leaderboard/site
+          --results-root published-results
+          --out public
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
