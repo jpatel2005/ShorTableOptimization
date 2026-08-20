@@ -116,6 +116,7 @@ BANNED_PATTERNS = {
         re.MULTILINE,
     ),
     "external implementation hook": re.compile(r"\b(?:extern|implemented_by)\b"),
+    "non-kernel computation": re.compile(r"\bnative_decide\b"),
 }
 
 ALLOWED_AXIOMS: set[str] = {"propext"}
@@ -331,11 +332,30 @@ def strip_lean_comments(text: str) -> str:
     output: list[str] = []
     i = 0
     depth = 0
-    while i < len(text):
-        if depth == 0 and text.startswith("--", i):
-            while i < len(text) and text[i] != "\n":
+    n = len(text)
+    while i < n:
+        # At top level, a string literal is data, not code: copy it verbatim so
+        # that `/-` / `-/` / `--` inside a string are not mistaken for comment
+        # delimiters. Without this, a token bracketed by "/-" ... "-/" string
+        # literals is silently deleted from the scan while Lean still compiles it.
+        if depth == 0 and text[i] == '"':
+            output.append('"')
+            i += 1
+            while i < n:
+                c = text[i]
+                if c == "\\" and i + 1 < n:
+                    output.append(text[i:i + 2])
+                    i += 2
+                    continue
+                output.append(c)
                 i += 1
-            if i < len(text):
+                if c == '"':
+                    break
+            continue
+        if depth == 0 and text.startswith("--", i):
+            while i < n and text[i] != "\n":
+                i += 1
+            if i < n:
                 output.append("\n")
                 i += 1
             continue
