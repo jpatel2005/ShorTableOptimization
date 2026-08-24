@@ -25,6 +25,7 @@ def stage(site: Path, results_root: Path, out: Path) -> None:
 
     out.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(site / "index.html", out / "index.html")
+    shutil.copyfile(site / "recursive-cost.js", out / "recursive-cost.js")
     shutil.copyfile(index_path, out / "results.json")
 
     policies = leaderboard.get("policies")
