@@ -9,15 +9,15 @@ the existing structural benchmark.
 
 The first version:
 
-- support `PhaseProduct` only;
-- optimize the ForShor-compatible logical gate count only;
-- accept any positive integer bit length `n`, including values that were not
+- supports `PhaseProduct` only;
+- optimizes the ForShor-compatible logical gate count only;
+- accepts any positive integer bit length `n`, including values that were not
   precomputed;
-- use every successfully archived PhaseProduct policy for `k = 2` through `16`;
-- select both `k` and the policy independently at each recursive call;
-- follow ForShor's width and logical-gate cost definitions unless the model
+- uses every successfully archived PhaseProduct policy for `k = 2` through `16`;
+- selects both `k` and the policy independently at each recursion level;
+- follows ForShor's width and logical-gate cost definitions unless the model
   explicitly identifies an intentional recursion improvement; and
-- run as part of the static website without requiring a server.
+- runs as part of the static website without requiring a server.
 
 The website input should be labeled **Integer bit length (n)**. An input such as
 `2048` means a 2048-bit integer, not the numerical value of an RSA modulus.
@@ -39,7 +39,7 @@ verified policies (k and operation program)
        recursive planner (n and objective)
                     |
                     v
-      selected policy and k at every node
+     selected policy and k at every level
                     |
                     v
         resource estimate and compact plan
@@ -172,8 +172,15 @@ within a level.
 The result also reports:
 
 - total recursive PhaseProduct calls;
-- raw arithmetic operation count;
-- the first selected policy, `k`, child width, and local arithmetic gate count.
+- total symbolic arithmetic operation count;
+- every selected policy, `k`, child width, and local arithmetic gate count; and
+- the expanded gate and arithmetic contribution from each recursion level.
+
+The website presents these choices as an aggregated recursion tree. Because
+ForShor-conformance mode pads every child at a level to one common width, equal
+subproblems are shown once with their multiplicity instead of repeated as
+identical branches. The exact verified operation sequence for each selected
+policy remains available from that level.
 
 Workspace and ancilla optimization are outside the first implementation.
 
@@ -199,9 +206,10 @@ set. Any persistent cache should include at least:
 (model version, candidate set, width)
 ```
 
-The planner stores a compact backpointer for the selected root choice rather
-than expanding the recursion tree. Runtime depends mainly on the number of
-distinct widths encountered, not directly on the numerical size of `n`.
+The dynamic program stores compact backpointers. Its machine-readable result has
+one aggregated entry per recursion level rather than expanding identical child
+nodes. Runtime depends mainly on the number of distinct widths encountered, not
+directly on the numerical size of `n`.
 
 ## Validation
 
@@ -212,10 +220,10 @@ CI checks:
 - differential tests for every operation kind;
 - fixed-policy recurrence comparisons at small widths;
 - strict-contraction and termination tests;
-- deterministic reproduction of selected plans and metrics; and
+- deterministic reproduction of selected plans and metrics;
 - exact agreement between the Lean reference and the shared browser/Node
   implementation over exhaustive, boundary, and seeded-random bit lengths;
-- browser-oriented performance checks for representative inputs including
+- plan-construction checks for representative inputs including
   `16`, `2048`, and `4096`.
 
 The model version and objective must be included in published results so that a

@@ -30,6 +30,18 @@ submission:
 | Total operations | All operations in the program. |
 | Generated points | Points produced for the target. |
 
+## Recursive Planning
+
+The website also provides a separate, width-dependent estimate for recursive
+multiplication. Given any positive integer bit length `n`, it automatically
+selects a verified `PhaseProduct` policy and `k` at each recursion level to
+minimize the ForShor-compatible logical gate count. It reports the selected
+levels, gate contributions, recursive calls, and symbolic arithmetic operations,
+with the exact archived policy operations available on demand.
+
+This estimate is not the leaderboard's per-target weighted score. Its scope and
+validation are documented in [RECURSIVE_COST_MODEL.md](RECURSIVE_COST_MODEL.md).
+
 ## Published Results
 
 The current per-target champions are displayed on the

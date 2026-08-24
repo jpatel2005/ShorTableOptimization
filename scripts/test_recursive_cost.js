@@ -103,15 +103,66 @@ function testPlanner() {
     recursion_height: 3,
     recursive_call_count: "14",
     arithmetic_operation_count: "0",
-    choice: {
-      policy_id: "test-binary",
-      k: 2,
-      child_width: 9,
-      local_arithmetic_gate_count: "0",
-      local_arithmetic_operation_count: 0,
-      recursive_call_count: 2,
-    },
+    steps: [
+      {
+        type: "recursive",
+        level: 0,
+        input_width: 16,
+        instances: "1",
+        policy_id: "test-binary",
+        k: 2,
+        child_width: 9,
+        recursive_products_per_node: 2,
+        local_gate_count_per_node: "0",
+        expanded_local_gate_count: "0",
+        local_arithmetic_operations_per_node: 0,
+        expanded_arithmetic_operations: "0",
+      },
+      {
+        type: "recursive",
+        level: 1,
+        input_width: 9,
+        instances: "2",
+        policy_id: "test-binary",
+        k: 2,
+        child_width: 6,
+        recursive_products_per_node: 2,
+        local_gate_count_per_node: "0",
+        expanded_local_gate_count: "0",
+        local_arithmetic_operations_per_node: 0,
+        expanded_arithmetic_operations: "0",
+      },
+      {
+        type: "recursive",
+        level: 2,
+        input_width: 6,
+        instances: "4",
+        policy_id: "test-binary",
+        k: 2,
+        child_width: 4,
+        recursive_products_per_node: 2,
+        local_gate_count_per_node: "0",
+        expanded_local_gate_count: "0",
+        local_arithmetic_operations_per_node: 0,
+        expanded_arithmetic_operations: "0",
+      },
+      {
+        type: "direct",
+        level: 3,
+        input_width: 4,
+        instances: "8",
+        gate_count_per_node: "16",
+        expanded_gate_count: "128",
+      },
+    ],
   });
+  const contributions = RecursiveCost.planLevels(width16).reduce(
+    (total, level) => total + (level.type === "direct"
+      ? level.expandedGateCount
+      : level.expandedLocalGateCount),
+    0n,
+  );
+  assert.equal(contributions, width16.gateCount);
 }
 
 async function testArchivedCatalog() {

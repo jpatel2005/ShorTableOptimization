@@ -53,7 +53,7 @@ jobs:
             | sh -s -- -y --default-toolchain "$(cat lean-toolchain)"
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
 
-      - name: Test recursive gate-count planner
+      - name: Test recursive cost model
         working-directory: source
         env:
           TABLE_GEN_RESULTS_ROOT: ../published-results

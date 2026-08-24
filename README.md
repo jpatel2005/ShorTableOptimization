@@ -31,14 +31,14 @@ Submissions should replace the `implementation` in:
 
 - `TableGeneration/Submission/Policy.lean`
 
-Related helper files should be placed under:
+Optional helper Lean files may be added elsewhere under:
 
-- `TableGeneration/Submission/Policy/`
+- `TableGeneration/Submission/`
 
-Import helpers from `Policy.lean`, for example:
+Import them from `Policy.lean`, for example:
 
 ```lean
-import TableGeneration.Submission.Policy.Helpers
+import TableGeneration.Submission.Helpers
 ```
 
 Do not change the protected specification, language, metrics, or workflow files.
@@ -115,9 +115,10 @@ no combined score across targets. See [BENCHMARK.md](BENCHMARK.md) for the
 current targets, weights, metric definitions, and published result formats. The
 current results are available on the
 [leaderboard website](https://jpatel2005.github.io/ShorTableOptimization/).
-The website also has a provisional PhaseProduct planner that accepts an integer
-bit length and minimizes the separate ForShor-compatible logical gate estimate
-across all successfully archived PhaseProduct policies; see
+The website also has a recursive multiplication planner that accepts an integer
+bit length, automatically selects among successfully archived `PhaseProduct`
+policies at each recursion level, and displays the selected steps and their
+estimated logical-gate contributions; see
 [RECURSIVE_COST_MODEL.md](RECURSIVE_COST_MODEL.md) for its scope.
 
 ## Local Checks

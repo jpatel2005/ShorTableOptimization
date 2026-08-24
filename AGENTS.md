@@ -11,8 +11,8 @@ submissions.
   `TableGeneration/Policy.lean`, and `TableGeneration/BestKnown.lean`.
 - Submission-facing code lives in `TableGeneration/Submission/`.
 - Submitters implement `GeneratorPolicy` in
-  `TableGeneration/Submission/Policy.lean`; related helpers belong under
-  `TableGeneration/Submission/Policy/`.
+  `TableGeneration/Submission/Policy.lean`; optional helper Lean files may be
+  added elsewhere under `TableGeneration/Submission/` and imported there.
 - `TableGeneration/Submission/Defs.lean` and `Correctness.lean` are fixed
   adapters.
 

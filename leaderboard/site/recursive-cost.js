@@ -204,6 +204,7 @@
       totalRecursiveCallCount: 0n,
       totalArithmeticOperationCount: 0n,
       choice: null,
+      childPlan: null,
     };
   }
 
@@ -225,6 +226,7 @@
         localArithmeticOperationCount: analysis.arithmeticOperationCount,
         recursiveCallCount: analysis.recursiveCallCount,
       },
+      childPlan: child,
     };
   }
 
@@ -368,6 +370,73 @@
     return typeof value === "bigint" ? value.toString() : value;
   }
 
+  function planLevels(plan) {
+    const levels = [];
+    let current = plan;
+    let instances = 1n;
+    let level = 0;
+    while (current.choice !== null) {
+      if (current.childPlan === null) {
+        throw new Error("recursive plan is missing its selected child.");
+      }
+      const choice = current.choice;
+      levels.push({
+        type: "recursive",
+        level,
+        inputWidth: current.width,
+        instances,
+        policyId: choice.policyId,
+        k: choice.k,
+        childWidth: choice.childWidth,
+        recursiveProductsPerNode: choice.recursiveCallCount,
+        localGateCountPerNode: choice.localArithmeticGateCount,
+        expandedLocalGateCount: instances * choice.localArithmeticGateCount,
+        localArithmeticOperationsPerNode: choice.localArithmeticOperationCount,
+        expandedArithmeticOperations:
+          instances * BigInt(choice.localArithmeticOperationCount),
+      });
+      instances *= BigInt(choice.recursiveCallCount);
+      current = current.childPlan;
+      level += 1;
+    }
+    levels.push({
+      type: "direct",
+      level,
+      inputWidth: current.width,
+      instances,
+      gateCountPerNode: current.gateCount,
+      expandedGateCount: instances * current.gateCount,
+    });
+    return levels;
+  }
+
+  function compactLevel(level) {
+    if (level.type === "direct") {
+      return {
+        type: "direct",
+        level: level.level,
+        input_width: level.inputWidth,
+        instances: decimal(level.instances),
+        gate_count_per_node: decimal(level.gateCountPerNode),
+        expanded_gate_count: decimal(level.expandedGateCount),
+      };
+    }
+    return {
+      type: "recursive",
+      level: level.level,
+      input_width: level.inputWidth,
+      instances: decimal(level.instances),
+      policy_id: level.policyId,
+      k: level.k,
+      child_width: level.childWidth,
+      recursive_products_per_node: level.recursiveProductsPerNode,
+      local_gate_count_per_node: decimal(level.localGateCountPerNode),
+      expanded_local_gate_count: decimal(level.expandedLocalGateCount),
+      local_arithmetic_operations_per_node: level.localArithmeticOperationsPerNode,
+      expanded_arithmetic_operations: decimal(level.expandedArithmeticOperations),
+    };
+  }
+
   function compactPlan(plan) {
     return {
       model_version: modelVersion,
@@ -377,14 +446,7 @@
       recursion_height: plan.recursionHeight,
       recursive_call_count: decimal(plan.totalRecursiveCallCount),
       arithmetic_operation_count: decimal(plan.totalArithmeticOperationCount),
-      choice: plan.choice === null ? null : {
-        policy_id: plan.choice.policyId,
-        k: plan.choice.k,
-        child_width: plan.choice.childWidth,
-        local_arithmetic_gate_count: decimal(plan.choice.localArithmeticGateCount),
-        local_arithmetic_operation_count: plan.choice.localArithmeticOperationCount,
-        recursive_call_count: plan.choice.recursiveCallCount,
-      },
+      steps: planLevels(plan).map(compactLevel),
     };
   }
 
@@ -413,6 +475,7 @@
     bestPlan,
     phaseProductResultDescriptors,
     archivedPhaseProductCandidates,
+    planLevels,
     compactPlan,
   });
 }));
