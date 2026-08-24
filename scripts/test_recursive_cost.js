@@ -16,6 +16,19 @@ const binaryCandidate = {
   ],
 };
 
+const transitionCandidate = {
+  policyId: "test-transitions",
+  k: 3,
+  operations: [
+    ["shiftL", 0, 3],
+    ["shiftR", 1, 2],
+    ["negate", 2],
+    ["addScaled", 0, 2, 1, 4],
+    ["addScaled", 2, 1, -1, 1],
+    ["phaseProduct", 0],
+  ],
+};
+
 let leanModulesBuilt = false;
 
 function ensureLeanModulesBuilt(repository) {
@@ -314,6 +327,26 @@ function testBalancedReferenceAgreement() {
   }
 }
 
+function testDenseSparseAgreement() {
+  const widths = [
+    ...Array.from({ length: 33 }, (_, index) => index),
+    63, 64, 65, 127, 128,
+  ];
+  for (const candidates of [
+    [binaryCandidate],
+    [transitionCandidate],
+    [binaryCandidate, transitionCandidate],
+  ]) {
+    const dense = RecursiveCost.buildPlanTable(candidates, Math.max(...widths));
+    const memoized = RecursiveCost.bestPlans(candidates, widths);
+    memoized.forEach((plan, index) => assert.deepEqual(plan, dense[widths[index]]));
+  }
+  assert.deepEqual(
+    runLeanOracle(["--dense-sparse", ...widths.map(String)]),
+    ["dense/sparse agreement passed"],
+  );
+}
+
 function testLeanDifferential() {
   const widths = deterministicWidths();
   const lean = leanPlans(widths);
@@ -346,6 +379,7 @@ function testBestKnownDifferential() {
   ];
   const lean = leanPlans(widths, "--best-known");
   const plans = RecursiveCost.bestPlans(candidates, widths);
+  const dense = RecursiveCost.buildPlanTable(candidates, 129);
   lean.forEach((expected, index) => {
     const width = widths[index];
     const actual = plans[index];
@@ -360,6 +394,7 @@ function testBestKnownDifferential() {
       arithmetic: String(actual.totalArithmeticOperationCount),
       choice,
     });
+    if (width <= 129) assert.deepEqual(actual, dense[width]);
   });
 
 }
@@ -371,6 +406,7 @@ async function main() {
   await testArchivedCatalog();
   await testPublishedArchive();
   testBalancedReferenceAgreement();
+  testDenseSparseAgreement();
   testLeanDifferential();
   testBestKnownDifferential();
   console.log("recursive cost tests passed");

@@ -211,6 +211,11 @@ one aggregated entry per recursion level rather than expanding identical child
 nodes. Runtime depends mainly on the number of distinct widths encountered, not
 directly on the numerical size of `n`.
 
+Both implementations retain a dense all-width planner as a readable reference.
+The actual Lean and JavaScript entry points use sparse or memoized traversal of
+reachable widths, with bounded tests confirming that both forms select the same
+plans.
+
 ## Validation
 
 CI checks:
@@ -220,6 +225,7 @@ CI checks:
 - differential tests for every operation kind;
 - fixed-policy recurrence comparisons at small widths;
 - strict-contraction and termination tests;
+- bounded agreement between the dense reference and sparse or memoized planner;
 - deterministic reproduction of selected plans and metrics;
 - exact agreement between the Lean reference and the shared browser/Node
   implementation over exhaustive, boundary, and seeded-random bit lengths;

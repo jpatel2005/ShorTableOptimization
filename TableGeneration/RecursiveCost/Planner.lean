@@ -66,8 +66,9 @@ def lowerGateCount (candidate current : PlanResult) : PlanResult :=
   if candidate.gateCount < current.gateCount then candidate else current
 
 /--
-Choose the minimum-gate plan for `width` from children already computed at all
-smaller widths. Noncontracting recursive candidates are rejected.
+Dense reference recurrence: choose the minimum-gate plan for `width` from
+children already computed at every smaller width. Noncontracting recursive
+candidates are rejected.
 -/
 def chooseAtWidth
     (candidates : List Candidate) (plans : Array PlanResult)
@@ -82,7 +83,10 @@ def chooseAtWidth
     else
       current) (PlanResult.base width)
 
-/-- Bottom-up dynamic-programming table for every width through `maxWidth`. -/
+/--
+Readable dense reference planner for every width through `maxWidth`. The
+production entry point `bestPlan` uses the equivalent sparse planner below.
+-/
 def buildPlanTable
     (candidates : List Candidate) (maxWidth : Nat) : Array PlanResult :=
   (List.range (maxWidth + 1)).foldl
@@ -118,7 +122,7 @@ def reachableWidths (candidates : List Candidate) (roots : List Nat) : List Nat 
   let maxWidth := roots.foldl max 0
   reachableWidthsAux candidates (maxWidth + 1) roots.eraseDups []
 
-/-- Sparse equivalent of `chooseAtWidth` using plans for reachable children. -/
+/-- Production recurrence using plans for reachable children only. -/
 def chooseAtWidthSparse
     (candidates : List Candidate) (plans : List PlanResult)
     (width : Nat) : PlanResult :=
@@ -133,9 +137,9 @@ def chooseAtWidthSparse
       current) (PlanResult.base width)
 
 /--
-Build plans only for widths reachable from `roots`. Sorting them first preserves
-the same bottom-up recurrence as `buildPlanTable` without rescanning every
-intermediate integer width.
+Production planner for widths reachable from `roots`. Sorting them first
+preserves the dense reference recurrence without rescanning every intermediate
+integer width.
 -/
 def buildSparsePlans
     (candidates : List Candidate) (roots : List Nat) : List PlanResult :=

@@ -74,6 +74,17 @@ def printPlans (candidates : List Candidate) (rawWidths : List String) : IO Unit
   for width in widths do
     IO.println (planLine ((findPlan? plans width).getD (PlanResult.base width)))
 
+def checkDenseSparseAgreement
+    (label : String) (candidates : List Candidate) (widths : List Nat) : IO Unit := do
+  let maxWidth := widths.foldl max 0
+  let dense := buildPlanTable candidates maxWidth
+  let sparse := buildSparsePlans candidates widths
+  for width in widths do
+    if dense[width]? = findPlan? sparse width then
+      pure ()
+    else
+      throw (IO.userError s!"dense/sparse mismatch for {label} at width {width}")
+
 end TableGeneration.RecursiveCost.TestOracle
 
 open TableGeneration.RecursiveCost
@@ -91,5 +102,12 @@ def main (args : List String) : IO Unit := do
         let width ← parseWidth raw
         IO.println (referenceLine binaryCandidate width)
         IO.println (referenceLine transitionCandidate width)
+  | "--dense-sparse" :: rawWidths =>
+      let widths ← rawWidths.mapM parseWidth
+      checkDenseSparseAgreement "binary" [binaryCandidate] widths
+      checkDenseSparseAgreement "transitions" [transitionCandidate] widths
+      checkDenseSparseAgreement "combined" [binaryCandidate, transitionCandidate] widths
+      checkDenseSparseAgreement "best-known" bestKnownCandidates widths
+      IO.println "dense/sparse agreement passed"
   | rawWidths =>
       printPlans [binaryCandidate] rawWidths

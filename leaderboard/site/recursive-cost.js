@@ -248,6 +248,7 @@
     return current;
   }
 
+  // Readable dense reference retained for bounded equivalence tests.
   function buildPlanTable(candidates, maxWidth) {
     requireNatural(maxWidth, "maxWidth");
     if (!Array.isArray(candidates)) throw new TypeError("candidates must be an array.");
@@ -258,6 +259,7 @@
     return plans;
   }
 
+  // Production planner: memoize only widths reachable from the requested roots.
   function bestPlans(candidates, widths) {
     if (!Array.isArray(candidates)) throw new TypeError("candidates must be an array.");
     if (!Array.isArray(widths)) throw new TypeError("widths must be an array.");
