@@ -5,4 +5,5 @@ import TableGeneration.Metrics
 import TableGeneration.Baseline
 import TableGeneration.Policy
 import TableGeneration.BestKnown
+import TableGeneration.RecursiveCost.Correctness
 import TableGeneration.Submission

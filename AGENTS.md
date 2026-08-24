@@ -46,6 +46,8 @@ submissions.
 ## Checks
 
 - Run `lake build TableGeneration` after Lean changes.
+- Run `node scripts/test_recursive_cost.js` after recursive planner or website
+  calculator changes.
 - CI runs `scripts/verifier.py` automatically for submission PRs.
 - For local verification while changing the verifier or template, run
   `python3 scripts/verifier.py --out-dir artifacts`.

@@ -1,0 +1,222 @@
+# Recursive PhaseProduct Cost Model
+
+This document describes the standalone cost planner for the verified
+table-generation policies in this repository. It is a design document, not the
+current leaderboard scoring contract. `BENCHMARK.md` remains authoritative for
+the existing structural benchmark.
+
+## Scope
+
+The first version:
+
+- support `PhaseProduct` only;
+- optimize the ForShor-compatible logical gate count only;
+- accept any positive integer bit length `n`, including values that were not
+  precomputed;
+- use every successfully archived PhaseProduct policy for `k = 2` through `16`;
+- select both `k` and the policy independently at each recursive call;
+- follow ForShor's width and logical-gate cost definitions unless the model
+  explicitly identifies an intentional recursion improvement; and
+- run as part of the static website without requiring a server.
+
+The website input should be labeled **Integer bit length (n)**. An input such as
+`2048` means a 2048-bit integer, not the numerical value of an RSA modulus.
+
+## Separation of Responsibilities
+
+The existing Lean verifier proves that a policy's symbolic operation program is
+valid. That proof is independent of the operand width.
+
+The recursive planner consumes only verified programs and decides how to use
+them for a particular width. The Lean model has one promoted built-in program
+per `k`; the website augments that catalog with every successful PhaseProduct
+result retained on `submission-results`:
+
+```text
+verified policies (k and operation program)
+                    |
+                    v
+       recursive planner (n and objective)
+                    |
+                    v
+      selected policy and k at every node
+                    |
+                    v
+        resource estimate and compact plan
+```
+
+The submission-facing Lean interface therefore does not need an `n` parameter.
+The planner owns the width-dependent selection.
+
+## ForShor Foundation
+
+The table-operation languages are compatible. Both repositories use:
+
+- `shiftL` and `shiftR`;
+- `negate`;
+- `addScaled`; and
+- `phaseProduct`.
+
+The standalone implementation reproduces a small, versioned subset of
+ForShor rather than importing ForShor as a dependency.
+
+### Initial widths
+
+The reference model supports a pair of operand widths `(xWidth,
+zWidth)`. The initial website profile maps `n` to `(n, n)`.
+
+For a policy with parameter `k`, ForShor uses a top-heavy split. The lower
+`k - 1` limbs have a common width, and the final limb absorbs each operand's
+remainder:
+
+```text
+limbWidth = min(floor(xWidth / k), floor(zWidth / k))
+```
+
+### Width transitions
+
+For each operand, ForShor conservatively updates symbolic widths as follows:
+
+```text
+shiftL(i, amount):
+  width[i] = width[i] + amount
+
+shiftR(i, amount):
+  width[i] = width[i] - amount, truncated at zero
+
+negate(i):
+  width[i] = width[i] + 1
+
+addScaled(dst, src, shift):
+  width[dst] = 1 + max(width[dst], width[src] + shift)
+```
+
+These are safe capacity bounds. They are not exact mathematical ranges, because
+an inverse addition does not make the recorded width shrink. The initial model
+retains these bounds so that its claims remain compatible with ForShor.
+
+ForShor currently pads every recursive child to one common maximum width. The
+planner implements this behavior as its conformance mode. A later
+branch-sensitive mode may retain the widths seen at each `phaseProduct` call and
+allow different branches to choose different recursive policies. That is an
+intentional optimization and will require corresponding compiler support before
+it can be described as an executable ForShor plan.
+
+### Logical gate costs
+
+The initial PhaseProduct model uses ForShor's conservative formulas:
+
+```text
+rippleAdder(width) = 9 * width + 2
+directPhaseProduct(xWidth, zWidth) = xWidth * zWidth
+```
+
+Shifts have zero logical-gate cost in this model. `addScaled` and `negate` have
+linear costs and are applied to both PhaseProduct operands. A controlled
+PhaseProduct profile may use ForShor's controlled base-case multiplier, but it
+must be identified separately from the ordinary PhaseProduct profile.
+
+These values are exact with respect to the declared abstract cost model. They
+are not hardware gate counts and do not include routing or error correction.
+
+## Recursive Optimization
+
+For a verified policy `P`, let `children(P, widths)` be the recursive
+PhaseProduct calls found by interpreting its operation program at the supplied
+widths.
+
+The minimum logical-gate cost is:
+
+```text
+G(widths) = min(
+  baseGateCost(widths),
+  min over eligible (k, P) of
+    arithmeticGateCost(P, widths)
+      + sum(G(childWidths) for childWidths in children(P, widths))
+)
+```
+
+The base case is always an available candidate. A recursive candidate is
+eligible only when every child is strictly smaller than its parent. This ensures
+termination and lets the cost model choose the base case based on cost rather
+than an arbitrary fixed threshold.
+
+In ForShor-conformance mode, all recursive calls at a node use the common padded
+child width. In branch-sensitive mode, each call may have its own width and may
+select a different `k` and policy.
+
+## Initial Metrics
+
+The first implementation optimizes logical gate count and reports a few
+supporting structural measurements for the selected plan.
+
+### Logical gate count
+
+Logical gate count is the total work. Arithmetic gates at a node and the gates
+from every recursive child are added.
+
+### Recursion height
+
+Recursion height is the number of decomposition levels on the longest branch:
+
+```text
+H(base) = 0
+H(recursive node) = 1 + max(H(child))
+```
+
+This is exact for the selected plan but does not include the cost of arithmetic
+within a level.
+
+### Supporting measurements
+
+The result also reports:
+
+- total recursive PhaseProduct calls;
+- raw arithmetic operation count;
+- the first selected policy, `k`, child width, and local arithmetic gate count.
+
+Workspace and ancilla optimization are outside the first implementation.
+
+## Objective
+
+The first implementation has one objective: **minimum ForShor-compatible
+logical gate count**. Recursion height is reported for the selected minimum-gate
+plan. Full circuit depth, workspace, ancilla, and balanced objectives can be
+added later without changing the verified table-policy interface.
+
+## On-Demand Computation
+
+Bit lengths are not precomputed. Archived policy operations are loaded from the
+same verified result files used by the leaderboard. The browser evaluates a
+requested width using memoized dynamic programming. The Lean reference visits
+only reachable widths; only the policy programs and cost-model version are
+published in advance.
+
+The memoization key is the requested width within one fixed model and candidate
+set. Any persistent cache should include at least:
+
+```text
+(model version, candidate set, width)
+```
+
+The planner stores a compact backpointer for the selected root choice rather
+than expanding the recursion tree. Runtime depends mainly on the number of
+distinct widths encountered, not directly on the numerical size of `n`.
+
+## Validation
+
+CI checks:
+
+- an executable Lean reference model with theorems for its core invariants;
+- golden width-transition cases generated from ForShor;
+- differential tests for every operation kind;
+- fixed-policy recurrence comparisons at small widths;
+- strict-contraction and termination tests;
+- deterministic reproduction of selected plans and metrics; and
+- exact agreement between the Lean reference and the shared browser/Node
+  implementation over exhaustive, boundary, and seeded-random bit lengths;
+- browser-oriented performance checks for representative inputs including
+  `16`, `2048`, and `4096`.
+
+The model version and objective must be included in published results so that a
+future ForShor cost-model change does not silently reinterpret old estimates.

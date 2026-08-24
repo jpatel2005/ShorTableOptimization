@@ -58,7 +58,7 @@
         margin-bottom: 20px;
       }
 
-      .card, .table-wrap {
+      .card, .planner, .table-wrap {
         border: 1px solid #dce1e8;
         border-radius: 12px;
         background: #fff;
@@ -84,6 +84,45 @@
         font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
         font-size: 0.9rem;
       }
+
+      .planner {
+        margin-bottom: 20px;
+        padding: 18px;
+      }
+
+      .planner h2 { margin: 0 0 5px; font-size: 1.15rem; }
+      .planner .subtitle { margin-bottom: 14px; }
+
+      .planner-form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        gap: 12px;
+      }
+
+      .planner-form label {
+        display: grid;
+        gap: 5px;
+        color: #5b6473;
+        font-size: 0.82rem;
+        font-weight: 650;
+      }
+
+      .planner-form input, .planner-form select, .planner-form button {
+        min-height: 38px;
+        border: 1px solid #cbd2dc;
+        border-radius: 7px;
+        padding: 7px 10px;
+        color: inherit;
+        background: inherit;
+        font: inherit;
+      }
+
+      .planner-form input { width: 150px; }
+      .planner-form button { cursor: pointer; font-weight: 700; }
+      .planner-output { margin-top: 14px; }
+      .planner-output strong { display: block; font-size: 1.2rem; }
+      .planner-detail { margin-top: 4px; color: #5b6473; }
 
       .table-wrap { overflow-x: auto; }
 
@@ -198,11 +237,12 @@
         :root { color: #e8edf5; background: #11151c; }
         .subtitle, .formula, footer, #status { color: #aab4c3; }
         a, .operations-button, .close-button { color: #8eb1ff; }
-        .card, .table-wrap, dialog { border-color: #303846; background: #191f29; box-shadow: none; }
+        .card, .planner, .table-wrap, dialog { border-color: #303846; background: #191f29; box-shadow: none; }
         .card span, thead th { color: #aab4c3; }
         thead th, tbody tr:hover { background: #202734; }
         th, td, details { border-color: #303846; }
-        .dialog-status { color: #aab4c3; }
+        .dialog-status, .planner-form label, .planner-detail { color: #aab4c3; }
+        .planner-form input, .planner-form select, .planner-form button { border-color: #465164; }
         pre { background: #11151c; }
       }
     </style>
@@ -225,6 +265,28 @@
         <div class="card"><span>Coverage</span><strong id="coverage">—</strong></div>
         <div class="card"><span>Champion policies</span><strong id="policy-count">—</strong></div>
         <div class="card"><span>Updated</span><strong id="updated">—</strong></div>
+      </section>
+
+      <section class="planner" aria-labelledby="planner-title">
+        <h2 id="planner-title">PhaseProduct gate-count planner</h2>
+        <p class="subtitle">Choose from archived verified policies for an integer bit length.</p>
+        <form class="planner-form" id="planner-form">
+          <label>
+            Integer bit length (n)
+            <input id="planner-width" name="width" type="number" min="1" step="1" value="2048" required>
+          </label>
+          <label>
+            Policy choice
+            <select id="planner-k" name="k">
+              <option value="">Automatic (best gate count)</option>
+            </select>
+          </label>
+          <button type="submit">Calculate</button>
+        </form>
+        <div class="planner-output" id="planner-output" role="status" hidden>
+          <strong id="planner-gates"></strong>
+          <p class="planner-detail" id="planner-detail"></p>
+        </div>
       </section>
 
       <p class="formula" id="formula">weighted cost</p>
@@ -275,6 +337,7 @@
       </dialog>
     </main>
 
+    <script src="recursive-cost.js"></script>
     <script>
       const repository = "https://github.com/jpatel2005/ShorTableOptimization";
       const table = document.querySelector("#results");
@@ -284,6 +347,7 @@
       const operationsStatus = document.querySelector("#operations-status");
       const operationsContent = document.querySelector("#operations-content");
       const operationsCache = new Map();
+      let leaderboardData = null;
 
       function addCell(row, value, className = "") {
         const cell = document.createElement("td");
@@ -348,13 +412,7 @@
         operationsDialog.showModal();
 
         try {
-          if (!operationsCache.has(path)) {
-            operationsCache.set(path, fetch(path, { cache: "no-store" }).then(response => {
-              if (!response.ok) throw new Error(`Operations request failed (${response.status}).`);
-              return response.json();
-            }));
-          }
-          const data = await operationsCache.get(path);
+          const data = await loadOperations(path);
           if (data.schema_version !== 1) throw new Error("Unsupported operations schema.");
           const target = data.targets.find(
             item => item.mode === champion.mode && item.k === champion.k,
@@ -375,6 +433,51 @@
           operationsStatus.textContent = `Could not load operations: ${error.message}`;
         }
       }
+
+      function loadOperations(path) {
+        if (!operationsCache.has(path)) {
+          operationsCache.set(path, fetch(path, { cache: "no-store" }).then(response => {
+            if (!response.ok) throw new Error(`Operations request failed (${response.status}).`);
+            return response.json();
+          }));
+        }
+        return operationsCache.get(path);
+      }
+
+      document.querySelector("#planner-form").addEventListener("submit", async event => {
+        event.preventDefault();
+        const output = document.querySelector("#planner-output");
+        const gates = document.querySelector("#planner-gates");
+        const detail = document.querySelector("#planner-detail");
+        output.hidden = false;
+        gates.textContent = "Calculating…";
+        detail.textContent = "";
+
+        try {
+          if (!leaderboardData) throw new Error("Leaderboard data has not loaded yet.");
+          const width = Number(document.querySelector("#planner-width").value);
+          if (!Number.isSafeInteger(width) || width < 1) {
+            throw new Error("Enter a positive integer bit length.");
+          }
+          const selectedK = document.querySelector("#planner-k").value;
+          let candidates = await RecursiveCost.archivedPhaseProductCandidates(
+            leaderboardData,
+            loadOperations,
+          );
+          if (selectedK) candidates = candidates.filter(candidate => candidate.k === Number(selectedK));
+          if (candidates.length === 0) throw new Error("No verified policy matches this choice.");
+          const plan = RecursiveCost.bestPlan(candidates, width);
+          gates.textContent = `${plan.gateCount.toLocaleString()} logical gates`;
+          detail.textContent = plan.choice === null
+            ? `Direct base case · ${RecursiveCost.modelVersion}`
+            : `First step k=${plan.choice.k}, policy ${plan.choice.policyId.slice(0, 8)}, ` +
+              `child width ${plan.choice.childWidth} · ` +
+              `recursion height ${plan.recursionHeight} · ${RecursiveCost.modelVersion}`;
+        } catch (error) {
+          gates.textContent = "Could not calculate";
+          detail.textContent = error.message;
+        }
+      });
 
       document.querySelector("#close-dialog").addEventListener("click", () => {
         operationsDialog.close();
@@ -441,6 +544,18 @@
           dateStyle: "medium",
           timeStyle: "short",
         }).format(new Date(data.generated_at));
+        leaderboardData = data;
+        const availableK = [...new Set(data.policies.flatMap(policy => policy.results)
+          .filter(result => result.mode === "PhaseProduct")
+          .map(result => result.k))]
+          .sort((left, right) => left - right);
+        const kSelect = document.querySelector("#planner-k");
+        for (const k of availableK) {
+          const option = document.createElement("option");
+          option.value = k;
+          option.textContent = `Use k=${k} throughout`;
+          kSelect.append(option);
+        }
         status.remove();
         table.hidden = false;
       }

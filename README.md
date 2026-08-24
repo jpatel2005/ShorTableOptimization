@@ -16,6 +16,8 @@ submissions.
 - `TableGeneration/Policy.lean` defines the portable policy interface.
 - `TableGeneration/BestKnown.lean` selects promoted policies before the general
   fallback.
+- `TableGeneration/RecursiveCost/` defines the standalone recursive gate-count
+  model and policy planner.
 - `TableGeneration/Submission/Policy.lean` contains the submitted policy.
 - `leaderboard/config.json` defines the active targets and score weights.
 - `leaderboard/site/index.html` is the static leaderboard website.
@@ -113,6 +115,10 @@ no combined score across targets. See [BENCHMARK.md](BENCHMARK.md) for the
 current targets, weights, metric definitions, and published result formats. The
 current results are available on the
 [leaderboard website](https://jpatel2005.github.io/ShorTableOptimization/).
+The website also has a provisional PhaseProduct planner that accepts an integer
+bit length and minimizes the separate ForShor-compatible logical gate estimate
+across all successfully archived PhaseProduct policies; see
+[RECURSIVE_COST_MODEL.md](RECURSIVE_COST_MODEL.md) for its scope.
 
 ## Local Checks
 
@@ -120,6 +126,12 @@ Build the Lean template:
 
 ```bash
 lake build TableGeneration
+```
+
+Check the Lean reference model against the shared browser/Node calculator:
+
+```bash
+node scripts/test_recursive_cost.js
 ```
 
 Run the submission verifier locally:
