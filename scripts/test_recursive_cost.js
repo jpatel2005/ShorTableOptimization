@@ -16,6 +16,21 @@ const binaryCandidate = {
   ],
 };
 
+let leanModulesBuilt = false;
+
+function ensureLeanModulesBuilt(repository) {
+  if (leanModulesBuilt) return;
+  const result = childProcess.spawnSync(
+    "lake",
+    ["build", "TableGeneration.RecursiveCost.Correctness"],
+    { cwd: repository, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 },
+  );
+  if (result.status !== 0) {
+    throw new Error(`Lean build failed:\n${result.stdout}\n${result.stderr}`);
+  }
+  leanModulesBuilt = true;
+}
+
 function testWidthModel() {
   assert.equal(RecursiveCost.phaseLimbWidth(10, 8, 3), 2);
   assert.deepEqual(RecursiveCost.initWidthState(10, 8, 3), {
@@ -200,6 +215,7 @@ function deterministicWidths() {
 
 function runLeanOracle(arguments_) {
   const repository = path.resolve(__dirname, "..");
+  ensureLeanModulesBuilt(repository);
   const oracle = path.join(repository, "scripts/tests/RecursiveCostOracle.lean");
   const result = childProcess.spawnSync(
     "lake",
