@@ -1,4 +1,5 @@
 import TableGeneration.Policy
+import TableGeneration.Policies.Accepted.P2a0c1db7342f
 import TableGeneration.Policies.Accepted.P52ec6fce9b57
 import TableGeneration.Policies.Accepted.P6f7d25984ff8
 import TableGeneration.Policies.Accepted.Pf4aff955f16b
@@ -29,10 +30,10 @@ def bestKnownGeneratedPoints (mode : ProductMode) (k : Nat) : List Point :=
     Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 5 then
-    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
+    Policies.Accepted.P2a0c1db7342f.implementation.generatedPoints
       mode k
   else if mode = .PhaseTripleProduct ∧ k = 5 then
-    Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
+    Policies.Accepted.P2a0c1db7342f.implementation.generatedPoints
       mode k
   else if mode = .PhaseProduct ∧ k = 6 then
     Policies.Accepted.Pf4aff955f16b.implementation.generatedPoints
@@ -124,10 +125,10 @@ def bestKnownGeneratePointsInOrder
     Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 5 then
-    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
+    Policies.Accepted.P2a0c1db7342f.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 5 then
-    Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
+    Policies.Accepted.P2a0c1db7342f.implementation.generatePointsInOrder
       mode k hk
   else if mode = .PhaseProduct ∧ k = 6 then
     Policies.Accepted.Pf4aff955f16b.implementation.generatePointsInOrder
@@ -219,10 +220,10 @@ def bestKnownGenerate
     Policies.Accepted.Pf4aff955f16b.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 5 then
-    Policies.Accepted.Pf4aff955f16b.implementation.generate
+    Policies.Accepted.P2a0c1db7342f.implementation.generate
       mode k hk
   else if mode = .PhaseTripleProduct ∧ k = 5 then
-    Policies.Accepted.Pf4aff955f16b.implementation.generate
+    Policies.Accepted.P2a0c1db7342f.implementation.generate
       mode k hk
   else if mode = .PhaseProduct ∧ k = 6 then
     Policies.Accepted.Pf4aff955f16b.implementation.generate
@@ -307,9 +308,9 @@ def bestKnownPolicyId (mode : ProductMode) (k : Nat) : String :=
   else if mode = .PhaseTripleProduct ∧ k = 4 then
     "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseProduct ∧ k = 5 then
-    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
+    "2a0c1db7342f6731447037ba3de30a32911f7eb1"
   else if mode = .PhaseTripleProduct ∧ k = 5 then
-    "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
+    "2a0c1db7342f6731447037ba3de30a32911f7eb1"
   else if mode = .PhaseProduct ∧ k = 6 then
     "f4aff955f16b6cb82982e2550b34ebc29c6992b1"
   else if mode = .PhaseTripleProduct ∧ k = 6 then
