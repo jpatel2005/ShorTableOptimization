@@ -14,8 +14,8 @@ Coverage: **30 of 30** targets.
 | `PhaseTripleProduct` `k=4` | **58** | 38 | 4 | 10 | 48 | 10 |
 | `PhaseProduct` `k=5` | **63** | 43 | 4 | 9 | 52 | 9 |
 | `PhaseTripleProduct` `k=5` | **95** | 65 | 6 | 13 | 78 | 13 |
-| `PhaseProduct` `k=6` | **91** | 66 | 5 | 11 | 77 | 11 |
-| `PhaseTripleProduct` `k=6` | **129** | 94 | 7 | 16 | 110 | 16 |
+| `PhaseProduct` `k=6` | **89** | 64 | 5 | 11 | 75 | 11 |
+| `PhaseTripleProduct` `k=6` | **128** | 93 | 7 | 16 | 109 | 16 |
 | `PhaseProduct` `k=7` | **122** | 92 | 6 | 13 | 105 | 13 |
 | `PhaseTripleProduct` `k=7` | **185** | 140 | 9 | 19 | 159 | 19 |
 | `PhaseProduct` `k=8` | **157** | 122 | 7 | 15 | 137 | 15 |
