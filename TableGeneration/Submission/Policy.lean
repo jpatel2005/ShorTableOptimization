@@ -1,4 +1,4 @@
-import TableGeneration.Policy
+import TableGeneration.Policies.Accepted.Pf4aff955f16b.OptimizedParity
 
 namespace TableGeneration.Submission.Policy
 
@@ -224,16 +224,22 @@ def generate (mode : ProductMode) (k : Nat) (hk : k >= 2) : Prog k :=
   else
     baselineGenerate mode k hk
 
-/-- Kernel checks bundled into the handled-target predicate. -/
+/-- One-pass consumption and final-state check. -/
+def executionCheck (mode : ProductMode) (k : Nat) (hk : k >= 2) : Bool :=
+  match
+      TableGeneration.Policies.Accepted.P6f7d25984ff8.GeneralParity.runConsume?
+        (positive_of_ge_two hk) State.start_state
+        (generate mode k hk) (generatedPoints mode k) with
+  | some (sigma, []) => statesEqual sigma State.start_state
+  | _ => false
+
+/-- Kernel checks proved once for each fixed handled cell. -/
 def generalChecks (mode : ProductMode) (k : Nat) : Bool :=
   if hk : k >= 2 then
     decide ((generatedPoints mode k).length = mode.pointCount k) &&
       (decide ((generatedPoints mode k).map normalizePoint).Nodup &&
         ((generatedPoints mode k).all validPoint? &&
-          (progConsumesPts? (positive_of_ge_two hk) State.start_state
-              (generate mode k hk) (generatedPoints mode k) &&
-            (safeProg? (generate mode k hk) &&
-              returnsToStartCheck (generate mode k hk) State.start_state))))
+          (executionCheck mode k hk && safeProg? (generate mode k hk))))
   else
     false
 
@@ -245,15 +251,75 @@ theorem scoredK_cases {k : Nat} (h : scoredK k = true) :
       k = 13 ∨ k = 14 ∨ k = 15 ∨ k = 16 := by
   simpa [scoredK, Bool.or_eq_true, decide_eq_true_eq] using h
 
-set_option exponentiation.threshold 512 in
-set_option maxHeartbeats 1000000000 in
-set_option maxRecDepth 100000 in
+set_option exponentiation.threshold 512
+set_option maxHeartbeats 1000000000
+set_option maxRecDepth 100000
+
+theorem checksPhaseProductK7 : generalChecks .PhaseProduct 7 = true := by decide
+theorem checksPhaseTripleProductK7 : generalChecks .PhaseTripleProduct 7 = true := by decide
+theorem checksPhaseProductK8 : generalChecks .PhaseProduct 8 = true := by decide
+theorem checksPhaseTripleProductK8 : generalChecks .PhaseTripleProduct 8 = true := by decide
+theorem checksPhaseProductK9 : generalChecks .PhaseProduct 9 = true := by decide
+theorem checksPhaseTripleProductK9 : generalChecks .PhaseTripleProduct 9 = true := by decide
+theorem checksPhaseProductK10 : generalChecks .PhaseProduct 10 = true := by decide
+theorem checksPhaseTripleProductK10 : generalChecks .PhaseTripleProduct 10 = true := by decide
+theorem checksPhaseProductK11 : generalChecks .PhaseProduct 11 = true := by decide
+theorem checksPhaseTripleProductK11 : generalChecks .PhaseTripleProduct 11 = true := by decide
+theorem checksPhaseProductK12 : generalChecks .PhaseProduct 12 = true := by decide
+theorem checksPhaseTripleProductK12 : generalChecks .PhaseTripleProduct 12 = true := by decide
+theorem checksPhaseProductK13 : generalChecks .PhaseProduct 13 = true := by decide
+theorem checksPhaseTripleProductK13 : generalChecks .PhaseTripleProduct 13 = true := by decide
+theorem checksPhaseProductK14 : generalChecks .PhaseProduct 14 = true := by decide
+theorem checksPhaseTripleProductK14 : generalChecks .PhaseTripleProduct 14 = true := by decide
+theorem checksPhaseProductK15 : generalChecks .PhaseProduct 15 = true := by decide
+theorem checksPhaseTripleProductK15 : generalChecks .PhaseTripleProduct 15 = true := by decide
+theorem checksPhaseProductK16 : generalChecks .PhaseProduct 16 = true := by decide
+theorem checksPhaseTripleProductK16 : generalChecks .PhaseTripleProduct 16 = true := by decide
+
 theorem generalChecks_scored
     (mode : ProductMode) (k : Nat) (h : scoredK k = true) :
     generalChecks mode k = true := by
   rcases scoredK_cases h with h | h | h | h | h | h | h | h | h | h
-  all_goals subst k
-  all_goals cases mode <;> decide
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK7
+    | PhaseTripleProduct => exact checksPhaseTripleProductK7
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK8
+    | PhaseTripleProduct => exact checksPhaseTripleProductK8
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK9
+    | PhaseTripleProduct => exact checksPhaseTripleProductK9
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK10
+    | PhaseTripleProduct => exact checksPhaseTripleProductK10
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK11
+    | PhaseTripleProduct => exact checksPhaseTripleProductK11
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK12
+    | PhaseTripleProduct => exact checksPhaseTripleProductK12
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK13
+    | PhaseTripleProduct => exact checksPhaseTripleProductK13
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK14
+    | PhaseTripleProduct => exact checksPhaseTripleProductK14
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK15
+    | PhaseTripleProduct => exact checksPhaseTripleProductK15
+  · subst k
+    cases mode with
+    | PhaseProduct => exact checksPhaseProductK16
+    | PhaseTripleProduct => exact checksPhaseTripleProductK16
 
 theorem checks_of_generalChecks
     (mode : ProductMode) (k : Nat) (hk : k >= 2)
@@ -268,10 +334,33 @@ theorem checks_of_generalChecks
   rcases Bool.and_eq_true_iff.mp hchecks with ⟨hlength, hrest⟩
   rcases Bool.and_eq_true_iff.mp hrest with ⟨hnodup, hrest⟩
   rcases Bool.and_eq_true_iff.mp hrest with ⟨hpoints, hrest⟩
-  rcases Bool.and_eq_true_iff.mp hrest with ⟨hconsumes, hrest⟩
-  rcases Bool.and_eq_true_iff.mp hrest with ⟨hsafe, hreturns⟩
-  exact ⟨⟨of_decide_eq_true hlength, of_decide_eq_true hnodup, hpoints⟩,
-    hconsumes, hsafe, hreturns⟩
+  rcases Bool.and_eq_true_iff.mp hrest with ⟨hexecution, hsafe⟩
+  unfold executionCheck at hexecution
+  generalize hrun :
+      TableGeneration.Policies.Accepted.P6f7d25984ff8.GeneralParity.runConsume?
+        (positive_of_ge_two hk) State.start_state
+        (generate mode k hk) (generatedPoints mode k) = result at hexecution
+  cases result with
+  | none => contradiction
+  | some result =>
+      rcases result with ⟨sigma, rest⟩
+      cases rest with
+      | cons _ _ => contradiction
+      | nil =>
+          have hconsumes :=
+            TableGeneration.Policies.Accepted.P6f7d25984ff8.GeneralParity.runConsume_consumes
+              (positive_of_ge_two hk) State.start_state sigma
+              (generate mode k hk) (generatedPoints mode k) hrun
+          have hrun' :=
+            TableGeneration.Policies.Accepted.P6f7d25984ff8.GeneralParity.runConsume_run
+              (positive_of_ge_two hk) State.start_state sigma
+              (generate mode k hk) (generatedPoints mode k) [] hrun
+          have hreturns :
+              returnsToStartCheck (generate mode k hk) State.start_state = true := by
+            simp [returnsToStartCheck, hrun', hexecution]
+          exact
+            ⟨⟨of_decide_eq_true hlength, of_decide_eq_true hnodup, hpoints⟩,
+              hconsumes, hsafe, hreturns⟩
 
 theorem generatedPoints_valid
     (mode : ProductMode) (k : Nat) (hk : k >= 2)
