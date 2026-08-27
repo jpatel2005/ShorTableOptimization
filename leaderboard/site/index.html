@@ -380,7 +380,8 @@
         <form class="planner-form" id="planner-form">
           <label>
             Integer bit length (n)
-            <input id="planner-width" name="width" type="number" min="1" step="1" value="2048" required>
+            <input id="planner-width" name="width" type="number"
+              min="1" step="1" placeholder="Enter bit length" required>
           </label>
           <button type="submit">Build plan</button>
         </form>
@@ -669,12 +670,28 @@
         return operationsCache.get(path);
       }
 
+      function clearPlannerOutput() {
+        document.querySelector("#planner-output").hidden = true;
+        for (const id of [
+          "#planner-gates",
+          "#planner-height",
+          "#planner-calls",
+          "#planner-arithmetic",
+        ]) {
+          document.querySelector(id).textContent = "—";
+        }
+        document.querySelector("#planner-detail").replaceChildren();
+        document.querySelector("#plan-tree").replaceChildren();
+        document.querySelector("#planner-json").textContent = "";
+        document.querySelector(".result-json").open = false;
+      }
+
       document.querySelector("#planner-form").addEventListener("submit", async event => {
         event.preventDefault();
         const output = document.querySelector("#planner-output");
         const plannerStatus = document.querySelector("#planner-status");
         const detail = document.querySelector("#planner-detail");
-        output.hidden = true;
+        clearPlannerOutput();
         plannerStatus.textContent = "Building the minimum-gate plan…";
 
         try {
