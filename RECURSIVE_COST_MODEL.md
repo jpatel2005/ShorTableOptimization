@@ -108,7 +108,7 @@ The initial PhaseProduct model uses ForShor's conservative formulas:
 
 ```text
 rippleAdder(width) = 9 * width + 2
-directPhaseProduct(xWidth, zWidth) = xWidth * zWidth
+directPhaseProduct(xWidth, zWidth) = 5 * xWidth * zWidth
 ```
 
 Shifts have zero logical-gate cost in this model. `addScaled` and `negate` have

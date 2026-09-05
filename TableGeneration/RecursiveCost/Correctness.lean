@@ -51,7 +51,7 @@ theorem analyzeProgram_childWidth_pos {k : Nat}
   exact nextSignedWidth_pos xWidth zWidth ops
 
 @[simp] theorem PlanResult.base_gateCount (width : Nat) :
-    (PlanResult.base width).gateCount = width * width := by
+    (PlanResult.base width).gateCount = 5 * width * width := by
   rfl
 
 @[simp] theorem PlanResult.base_choice (width : Nat) :
