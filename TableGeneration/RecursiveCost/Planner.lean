@@ -3,7 +3,7 @@ import TableGeneration.RecursiveCost.Catalog
 namespace TableGeneration.RecursiveCost
 
 /-- Version attached to every result produced by this cost model. -/
-def modelVersion : String := "forshor-phase-product-gates-v1"
+def modelVersion : String := "forshor-phase-product-gates-v2"
 
 /-- Stable machine-readable optimization objective. -/
 def objective : String := "logical_gate_count"

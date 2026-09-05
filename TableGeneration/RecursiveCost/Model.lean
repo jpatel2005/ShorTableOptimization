@@ -163,9 +163,9 @@ def rippleAdderGateBound (width : Nat) : Nat :=
 def negateGateBound (width : Nat) : Nat :=
   width + rippleAdderGateBound width
 
-/-- Direct signed PhaseProduct base-case cost. -/
+/-- Direct signed PhaseProduct base-case cost from ForShor's logical-gate model. -/
 def directSignedPhaseProductGateCount (xWidth zWidth : Nat) : Nat :=
-  xWidth * zWidth
+  5 * xWidth * zWidth
 
 /--
 Nonrecursive arithmetic cost of one table operation at the common working

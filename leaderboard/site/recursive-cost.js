@@ -8,7 +8,7 @@
 }(typeof globalThis === "undefined" ? this : globalThis, function recursiveCostFactory() {
   "use strict";
 
-  const modelVersion = "forshor-phase-product-gates-v1";
+  const modelVersion = "forshor-phase-product-gates-v2";
   const objective = "logical_gate_count";
 
   function requireNatural(value, name) {
@@ -163,7 +163,7 @@
   function directSignedPhaseProductGateCount(xWidth, zWidth) {
     requireNatural(xWidth, "xWidth");
     requireNatural(zWidth, "zWidth");
-    return BigInt(xWidth) * BigInt(zWidth);
+    return 5n * BigInt(xWidth) * BigInt(zWidth);
   }
 
   function phaseArithmeticOpCost(workingWidth, operation) {

@@ -76,7 +76,7 @@ function testWidthModel() {
 function testGateModel() {
   assert.equal(RecursiveCost.rippleAdderGateBound(7), 65n);
   assert.equal(RecursiveCost.negateGateBound(7), 72n);
-  assert.equal(RecursiveCost.directSignedPhaseProductGateCount(7, 9), 63n);
+  assert.equal(RecursiveCost.directSignedPhaseProductGateCount(7, 9), 315n);
 
   const analysis = RecursiveCost.analyzeProgram(8, 8, {
     policyId: "arithmetic-test",
@@ -98,21 +98,21 @@ function testGateModel() {
 
 function testPlanner() {
   const width8 = RecursiveCost.bestPlan([binaryCandidate], 8);
-  assert.equal(width8.gateCount, 50n);
+  assert.equal(width8.gateCount, 250n);
   assert.equal(width8.recursionHeight, 1);
   assert.equal(width8.totalRecursiveCallCount, 2n);
   assert.equal(width8.choice.k, 2);
   assert.equal(width8.choice.childWidth, 5);
 
   const width16 = RecursiveCost.bestPlan([binaryCandidate], 16);
-  assert.equal(width16.gateCount, 128n);
+  assert.equal(width16.gateCount, 640n);
   assert.equal(width16.recursionHeight, 3);
   assert.equal(width16.totalRecursiveCallCount, 14n);
   assert.deepEqual(RecursiveCost.compactPlan(width16), {
     model_version: RecursiveCost.modelVersion,
     objective: RecursiveCost.objective,
     width: 16,
-    gate_count: "128",
+    gate_count: "640",
     recursion_height: 3,
     recursive_call_count: "14",
     arithmetic_operation_count: "0",
@@ -164,8 +164,8 @@ function testPlanner() {
         level: 3,
         input_width: 4,
         instances: "8",
-        gate_count_per_node: "16",
-        expanded_gate_count: "128",
+        gate_count_per_node: "80",
+        expanded_gate_count: "640",
       },
     ],
   });
